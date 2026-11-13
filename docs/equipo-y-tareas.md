@@ -9,9 +9,9 @@ marcadores: reemplácelos por los integrantes reales.
 
 | Rol | Integrante | Frente principal | Horas estimadas |
 | --- | --- | --- | --- |
-| A | _(nombre)_ | Backend, base de datos y seguridad | ~23 h |
-| B | _(nombre)_ | Frontend, UX y demo | ~19 h |
-| C | _(nombre)_ | QA, DevOps, CI y documentación | ~22 h |
+| A | Oscar | Backend, base de datos y seguridad | ~23 h |
+| B | Denis | Frontend, UX y demo | ~19 h |
+| C | Luis | QA, DevOps, CI y documentación | ~22 h |
 
 Las horas son estimaciones para planificación; se ajustan en la primera reunión.
 
