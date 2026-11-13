@@ -1,0 +1,68 @@
+name: sportreserve-tasks
+
+services:
+  db:
+    image: postgres:17
+    container_name: sportreserve_db
+    env_file:
+      - ./backend/.env
+    ports:
+      # 5433 en el host para no chocar con un PostgreSQL local en 5432.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sportreserve_backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Dentro de la red de Compose el host de PostgreSQL es el servicio db.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # El frontend de Compose se publica en 5174 (5173 suele estar ocupado).
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:8080
+      COOKIE_SECURE: "false"
+      TRUST_PROXY: "true"
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: sportreserve_frontend
+    ports:
+      - "127.0.0.1:5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

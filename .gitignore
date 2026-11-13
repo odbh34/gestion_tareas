@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+
+# Artefactos de build y cobertura
+dist/
+coverage/
+.vite/
+
+# Variables de entorno (nunca subir secretos)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.local
+
+# Volcados de base de datos
+*.dump
+*.sql.gz
