@@ -215,6 +215,7 @@ en lugar de `403` para no revelar la existencia del recurso.
 | Enumeración de usuarios | Mensaje genérico en login y `404` en recursos ajenos |
 | Escalada de privilegios | Rol asignado en servidor; cambio de rol solo por administrador |
 | Fuga de información | `x-powered-by` deshabilitado; errores internos no expuestos |
+| Cacheo de respuestas | `Cache-Control: no-store` en `/api`; rewrite de Vercel sin caché |
 
 ### Decisiones y compensaciones
 
@@ -274,7 +275,7 @@ Formato de error uniforme:
 
 ## 12. Pruebas
 
-Se implementaron 38 pruebas de backend y 3 de frontend. Las pruebas de backend
+Se implementaron 39 pruebas de backend y 3 de frontend. Las pruebas de backend
 se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y cubren:
 
 - Registro, login, logout, sesión y usuarios inactivos.
@@ -306,6 +307,8 @@ La guía completa está en [`despliegue.md`](despliegue.md). Resumen:
 - **Docker local**: `docker compose up --build`.
 - **Producción**: backend con `NODE_ENV=production`, HTTPS, cookie segura,
   base gestionada, secretos externos y Nginx como proxy inverso.
+- **Demo gratuita**: Neon (PostgreSQL) + Render (backend) + Vercel (frontend con
+  rewrite `/api`), detallada en [`despliegue-gratuito.md`](despliegue-gratuito.md).
 
 ## 15. Trabajo en equipo
 

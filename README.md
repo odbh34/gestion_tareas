@@ -165,7 +165,7 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 38 pruebas
+npm test                  # 39 pruebas
 npm run test:coverage
 npm run lint
 
@@ -202,6 +202,7 @@ Los detalles y las limitaciones se explican en
 - [Referencia de la API](docs/api.md)
 - [Estrategia y casos de prueba](docs/pruebas.md)
 - [Guía de despliegue](docs/despliegue.md)
+- [Despliegue gratuito: Neon + Render + Vercel](docs/despliegue-gratuito.md)
 - [Matriz de requisitos](docs/matriz-requisitos.md)
 - [Plan de trabajo para 3 integrantes](docs/equipo-y-tareas.md)
 - [Guía de contribución](CONTRIBUTING.md)

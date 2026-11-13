@@ -18,6 +18,13 @@ const app = express();
 app.set('trust proxy', env.TRUST_PROXY ? 1 : false);
 app.disable('x-powered-by');
 
+// Evita que CDNs y proxies (por ejemplo, el rewrite de Vercel) cacheen
+// respuestas autenticadas o con datos personales.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 app.use(
   helmet({
     contentSecurityPolicy: {

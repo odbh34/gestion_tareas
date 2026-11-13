@@ -16,7 +16,7 @@
 | RF-10 | Rol docente | Lee todas, edita solo las suyas | `tests/tasks.test.js` |
 | RF-11 | Rol administrador | CRUD total y gestión de usuarios | `tests/tasks.test.js`, `tests/security.test.js` |
 | RF-12 | Interfaz web | React + Vite | `frontend/src/pages` |
-| RF-13 | Pruebas automatizadas | 38 backend + 3 frontend | `docs/pruebas.md` |
+| RF-13 | Pruebas automatizadas | 39 backend + 3 frontend | `docs/pruebas.md` |
 | RF-14 | Repositorio Git | `main`, `develop`, `feature/*`, PR | `CONTRIBUTING.md` |
 | RF-15 | Memoria técnica | `docs/memoria-tecnica.md` | Este repositorio |
 | RF-16 | Docker opcional | `compose.yaml` + Dockerfiles | `docs/despliegue.md` |

@@ -114,6 +114,7 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | Login con SQLi | `400` o `401`, nunca acceso |
 | Tarea con `<script>` e `<img onerror>` | Se guarda y devuelve como texto JSON |
 | Cabeceras defensivas | CSP, `nosniff`, `DENY`, sin `X-Powered-By` |
+| Respuestas de API | `Cache-Control: no-store` |
 | Origen no permitido | `403 CORS_NOT_ALLOWED` |
 | Origen permitido | Cabecera CORS correcta |
 
@@ -155,7 +156,7 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  4 archivos, 38 pruebas aprobadas
+Backend:  4 archivos, 39 pruebas aprobadas
 Frontend: 1 archivo, 3 pruebas aprobadas
 ```
 

@@ -1,5 +1,8 @@
 # Guía de despliegue
 
+> Para una demo académica sin coste, consulta la guía
+> [`despliegue-gratuito.md`](despliegue-gratuito.md) (Neon + Render + Vercel).
+
 ## 1. Modos de ejecución
 
 | Modo | Base de datos | Backend | Frontend | Uso |

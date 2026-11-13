@@ -208,6 +208,15 @@ describe('Seguridad: XSS y cabeceras', () => {
     expect(response.headers['x-powered-by']).toBeUndefined();
   });
 
+  it('evita el cacheo de respuestas de la API', async () => {
+    const response = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Cookie', studentCookie);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+  });
+
   it('rechaza orígenes no permitidos', async () => {
     const response = await request(app)
       .get('/api/v1/auth/me')
