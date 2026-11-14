@@ -131,6 +131,7 @@ async function updateRole(id, role) {
 
 module.exports = {
   PUBLIC_FIELDS,
+  PUBLIC_FROM,
   toPublicUser,
   findById,
   findByEmail,

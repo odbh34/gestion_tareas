@@ -4,9 +4,11 @@ const env = require('../config/env');
 const ISSUER = 'sportreserve-api';
 const AUDIENCE = 'sportreserve-web';
 
-function signToken(userId) {
+function signToken(userId, sessionId) {
   return jwt.sign({}, env.JWT_SECRET, {
     subject: userId,
+    // jti identifica la fila de sessions; sin él el token no es válido.
+    jwtid: sessionId,
     expiresIn: env.JWT_EXPIRES_IN,
     issuer: ISSUER,
     audience: AUDIENCE,

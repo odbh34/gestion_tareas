@@ -6,6 +6,7 @@ const { authLimiter } = require('../../middleware/rateLimit');
 const asyncHandler = require('../../utils/asyncHandler');
 const { signToken } = require('../../utils/jwt');
 const authService = require('./auth.service');
+const sessionsService = require('./sessions.service');
 const { registerSchema, loginSchema } = require('./auth.schemas');
 
 const router = express.Router();
@@ -36,7 +37,8 @@ router.post(
   validate(loginSchema),
   asyncHandler(async (req, res) => {
     const user = await authService.login(req.validated.body);
-    const token = signToken(user.id);
+    const session = await sessionsService.createSession(user.id);
+    const token = signToken(user.id, session.id);
     res.cookie(env.COOKIE_NAME, token, cookieOptions());
     res.status(200).json({ data: user });
   }),
