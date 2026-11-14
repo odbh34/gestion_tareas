@@ -165,8 +165,8 @@ sequenceDiagram
 ```
 
 El enlace tiene la forma `FRONTEND_URL/restablecer#token=...`. El fragmento no
-se envía al servidor; el frontend debe leerlo, limpiar la URL y enviarlo en el
-cuerpo del `POST`.
+se envía al servidor; la página `/restablecer` lo lee, limpia la URL con
+`history.replaceState` y lo envía en el cuerpo del `POST`.
 
 ## 7. Cookies y JWT
 

@@ -12,7 +12,8 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 - Bloqueo progresivo de la cuenta tras intentos fallidos y límite de intentos
   por IP.
 - Restablecimiento de contraseña por correo con token de un solo uso y cambio
-  de contraseña autenticado.
+  de contraseña autenticado, con páginas de olvidé mi contraseña, restablecer y
+  cambiar contraseña.
 - Auditoría de eventos de autenticación sin datos sensibles.
 - CRUD de tareas con título, descripción, estado y dueño.
 - Roles **estudiante**, **docente** y **administrador**.

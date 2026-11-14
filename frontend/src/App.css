@@ -377,6 +377,11 @@ textarea:focus {
   top: 5.2rem;
 }
 
+.settings-panel {
+  width: min(520px, 100%);
+  padding: 1.25rem;
+}
+
 .panel-heading {
   display: flex;
   align-items: center;

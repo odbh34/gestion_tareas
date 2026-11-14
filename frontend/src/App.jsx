@@ -6,6 +6,9 @@ import Loading from './components/Loading';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import TasksPage from './pages/TasksPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -40,6 +43,8 @@ function AppRoutes() {
           )
         }
       />
+      <Route path="/olvide-contrasena" element={<ForgotPasswordPage />} />
+      <Route path="/restablecer" element={<ResetPasswordPage />} />
 
       <Route
         element={
@@ -49,6 +54,7 @@ function AppRoutes() {
         }
       >
         <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/cambiar-contrasena" element={<ChangePasswordPage />} />
         <Route
           path="/admin/users"
           element={

@@ -80,8 +80,6 @@ personas pueda mantenerla y evolucionarla.
 
 ### Excluido de esta versión
 
-- Interfaz de restablecimiento y cambio de contraseña (los endpoints existen;
-  la UI quedó para una fase posterior).
 - Verificación de correo electrónico.
 - Adjuntos o comentarios en tareas.
 - Notificaciones en tiempo real.
@@ -345,8 +343,6 @@ en lugar de `403` para no revelar la existencia del recurso.
 - El registro revela si un correo existe (`409 EMAIL_IN_USE`), por compatibilidad
   con el cliente y las pruebas existentes.
 - No hay verificación de correo electrónico.
-- La UI de restablecimiento y cambio de contraseña no está implementada; el
-  backend expone los endpoints.
 - Para producción real se requiere HTTPS, `COOKIE_SECURE=true` y secretos
   gestionados fuera del repositorio.
 
@@ -460,8 +456,7 @@ separación por módulos, la validación estricta y el uso de consultas
 parametrizadas facilitan el mantenimiento. La documentación y la CI permiten que
 los tres integrantes trabajen en paralelo con un criterio común de calidad.
 
-Como siguiente etapa se recomienda completar la interfaz de restablecimiento y
-cambio de contraseña, agregar las pruebas automatizadas de R5, configurar un
-proveedor de correo con API HTTPS para producción, medir los saltos reales de
-proxy y añadir un almacén compartido para rate limiting si se ejecutan varias
-instancias.
+Como siguiente etapa se recomienda agregar las pruebas automatizadas de R5,
+configurar un proveedor de correo con API HTTPS para producción, medir los saltos
+reales de proxy y añadir un almacén compartido para rate limiting si se ejecutan
+varias instancias.

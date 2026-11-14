@@ -163,6 +163,11 @@ comandos y las salidas están en [`evidencia-auth.md`](evidencia-auth.md).
 
 ## 5. Casos de frontend
 
+Las páginas nuevas de contraseña (`/olvide-contrasena`, `/restablecer` y
+`/cambiar-contrasena`) se verificaron con `npm run build` y comprobaciones
+manuales de renderizado. Sus pruebas de componente quedan pendientes junto con
+las de R5.
+
 `frontend/src/components/TaskCard.test.jsx`:
 
 1. Un título con `<script>` y una descripción con `<img onerror>` se muestran

@@ -52,6 +52,12 @@ export const api = {
   login: (data) => request('/auth/login', { method: 'POST', body: data }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
+  changePassword: (data) =>
+    request('/auth/change-password', { method: 'POST', body: data }),
+  forgotPassword: (data) =>
+    request('/auth/forgot-password', { method: 'POST', body: data }),
+  resetPassword: (data) =>
+    request('/auth/reset-password', { method: 'POST', body: data }),
 
   listTasks: (params = {}) => request(withQuery('/tasks', params)),
   createTask: (data) => request('/tasks', { method: 'POST', body: data }),

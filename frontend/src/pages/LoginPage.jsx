@@ -100,6 +100,10 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-switch">
+          <Link to="/olvide-contrasena">¿Olvidaste tu contraseña?</Link>
+        </p>
+
+        <p className="auth-switch">
           ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
         </p>
 

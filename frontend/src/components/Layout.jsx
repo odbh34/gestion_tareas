@@ -44,6 +44,12 @@ export default function Layout() {
               Usuarios
             </NavLink>
           )}
+          <NavLink
+            to="/cambiar-contrasena"
+            className={({ isActive }) => (isActive ? 'active' : undefined)}
+          >
+            Contraseña
+          </NavLink>
         </nav>
 
         <div className="user-menu">

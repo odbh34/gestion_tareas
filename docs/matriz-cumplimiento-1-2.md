@@ -206,7 +206,7 @@ Mientras tanto, la evidencia manual reproducible está en
 | Proxy de producción | `TRUST_PROXY` queda como estaba (`true` equivale a 1) hasta medir los saltos reales con `LOG_FORWARDED_FOR` |
 | Correo local | Mailpit en `http://127.0.0.1:8025` |
 | Correo producción | Pendiente de configurar SMTP real; Render Free bloquea puertos SMTP |
-| Frontend | Los endpoints existen; la interfaz de reset/cambio se dejó para la fase 8, que requiere autorización expresa |
+| Frontend | Implementado: `/olvide-contrasena`, `/restablecer` (token leído del fragmento y borrado de la URL) y `/cambiar-contrasena` |
 
 ## 8. Riesgos residuales
 

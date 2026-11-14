@@ -94,7 +94,8 @@ Estado de las extensiones en la rama `feature/seguridad-auth`:
 - **E01** (recuperación con token de un solo uso): implementada en backend y
   verificada manualmente; faltan las pruebas automatizadas de R5 y la UI.
 - **E02** (perfil y cambio de contraseña): el cambio de contraseña está
-  implementado en backend; la pantalla de perfil queda pendiente.
+  implementado en backend y en la página `/cambiar-contrasena`; un perfil
+  ampliado (nombre, correo) sigue fuera del alcance.
 - Las pruebas automatizadas de R5 se asignan a otro integrante y deben entrar en
   una rama `test/*` antes de fusionar a `main`.
 
