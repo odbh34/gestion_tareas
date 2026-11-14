@@ -3,7 +3,7 @@ const env = require('../../config/env');
 const pool = require('../../config/database');
 const authenticate = require('../../middleware/auth');
 const validate = require('../../middleware/validate');
-const { loginLimiter, registerLimiter } = require('../../middleware/rateLimit');
+const { loginLimiter, registerLimiter, forgotPasswordLimiter } = require('../../middleware/rateLimit');
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const { signToken, verifyToken } = require('../../utils/jwt');
@@ -11,11 +11,14 @@ const { hashPassword, verifyPassword } = require('../../utils/password');
 const authService = require('./auth.service');
 const authEvents = require('./authEvents.service');
 const sessionsService = require('./sessions.service');
+const passwordResetService = require('./passwordReset.service');
 const usersService = require('../users/users.service');
 const {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } = require('./auth.schemas');
 
 const router = express.Router();
@@ -163,6 +166,39 @@ router.post(
     } finally {
       client.release();
     }
+  }),
+);
+
+router.post(
+  '/forgot-password',
+  forgotPasswordLimiter,
+  validate(forgotPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await passwordResetService.requestReset(req.validated.body, {
+      ip: req.ip,
+    });
+
+    // Misma respuesta exista o no el correo, para no permitir enumeración.
+    res.status(202).json({
+      data: {
+        message:
+          'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña',
+      },
+    });
+  }),
+);
+
+router.post(
+  '/reset-password',
+  validate(resetPasswordSchema),
+  asyncHandler(async (req, res) => {
+    await passwordResetService.resetPassword(req.validated.body, {
+      ip: req.ip,
+    });
+
+    res.status(200).json({
+      data: { message: 'Contraseña restablecida correctamente' },
+    });
   }),
 );
 

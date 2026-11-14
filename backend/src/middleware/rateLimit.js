@@ -29,4 +29,12 @@ const loginLimiter = createLimiter(20, { skipSuccessfulRequests: true });
 // El registro no depende de credenciales: cuenta todas las solicitudes.
 const registerLimiter = createLimiter(env.RATE_LIMIT_AUTH_MAX);
 
-module.exports = { globalLimiter, loginLimiter, registerLimiter };
+// Restablecimiento: más estricto para no permitir abuso del envío de correos.
+const forgotPasswordLimiter = createLimiter(5);
+
+module.exports = {
+  globalLimiter,
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+};

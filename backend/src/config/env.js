@@ -46,6 +46,19 @@ const schema = z.object({
   SEED_STUDENT_PASSWORD: z.string().min(10).default('Demo12345!'),
   SEED_TEACHER_PASSWORD: z.string().min(10).default('Demo12345!'),
   SEED_ADMIN_PASSWORD: z.string().min(10).default('Demo12345!'),
+
+  // Restablecimiento de contraseña por correo.
+  FRONTEND_URL: z.string().min(1).default('http://localhost:5173'),
+  RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().default(2525),
+  SMTP_SECURE: booleanFromEnv(false),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  MAIL_FROM: z
+    .string()
+    .min(1)
+    .default('SportReserve Tasks <no-reply@sportreserve.local>'),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -47,10 +47,25 @@ const changePasswordSchema = z
   })
   .strict();
 
+const forgotPasswordSchema = z
+  .object({
+    email: emailSchema,
+  })
+  .strict();
+
+const resetPasswordSchema = z
+  .object({
+    token: z.string().max(200),
+    newPassword: passwordSchema,
+  })
+  .strict();
+
 module.exports = {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   emailSchema,
   passwordSchema,
   loginPasswordSchema,
