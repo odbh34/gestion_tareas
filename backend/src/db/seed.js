@@ -60,8 +60,8 @@ async function seed() {
   for (const user of users) {
     const passwordHash = await bcrypt.hash(user.password, env.BCRYPT_ROUNDS);
     await pool.query(
-      `INSERT INTO users (name, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (name, email, password_hash, role_id)
+       VALUES ($1, $2, $3, (SELECT id FROM roles WHERE name = $4))
        ON CONFLICT (email) DO NOTHING`,
       [user.name, user.email, passwordHash, user.role],
     );

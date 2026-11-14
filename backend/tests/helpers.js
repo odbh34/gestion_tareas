@@ -9,7 +9,11 @@ async function setupDatabase() {
 }
 
 async function resetDatabase() {
-  await pool.query('TRUNCATE TABLE tasks, users RESTART IDENTITY CASCADE');
+  // roles no se trunca: es catálogo fijo creado por la migración 002.
+  await pool.query(
+    `TRUNCATE TABLE auth_events, password_reset_tokens, sessions, tasks, users
+     RESTART IDENTITY CASCADE`,
+  );
 }
 
 async function createUser({
@@ -21,13 +25,13 @@ async function createUser({
 } = {}) {
   const passwordHash = await bcrypt.hash(password, 4);
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, is_active)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, email, role, is_active`,
+    `INSERT INTO users (name, email, password_hash, role_id, is_active)
+     VALUES ($1, $2, $3, (SELECT id FROM roles WHERE name = $4), $5)
+     RETURNING id, name, email, is_active`,
     [name, email, passwordHash, role, isActive],
   );
 
-  return { ...rows[0], password };
+  return { ...rows[0], role, password };
 }
 
 function cookieFrom(response) {
