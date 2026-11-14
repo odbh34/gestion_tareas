@@ -36,6 +36,9 @@ const schema = z.object({
   TRUST_PROXY: booleanFromEnv(false),
 
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
+  LOCKOUT_THRESHOLD: z.coerce.number().int().positive().default(5),
+  LOCKOUT_BASE_SECONDS: z.coerce.number().int().positive().default(60),
+  LOCKOUT_MAX_SECONDS: z.coerce.number().int().positive().default(900),
   RATE_LIMIT_ENABLED: booleanFromEnv(true),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().positive().default(10),
   RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(300),

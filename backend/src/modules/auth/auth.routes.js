@@ -2,7 +2,7 @@ const express = require('express');
 const env = require('../../config/env');
 const authenticate = require('../../middleware/auth');
 const validate = require('../../middleware/validate');
-const { authLimiter } = require('../../middleware/rateLimit');
+const { loginLimiter, registerLimiter } = require('../../middleware/rateLimit');
 const asyncHandler = require('../../utils/asyncHandler');
 const { signToken } = require('../../utils/jwt');
 const authService = require('./auth.service');
@@ -23,20 +23,22 @@ function cookieOptions() {
 
 router.post(
   '/register',
-  authLimiter,
+  registerLimiter,
   validate(registerSchema),
   asyncHandler(async (req, res) => {
-    const user = await authService.register(req.validated.body);
+    const user = await authService.register(req.validated.body, {
+      ip: req.ip,
+    });
     res.status(201).json({ data: user });
   }),
 );
 
 router.post(
   '/login',
-  authLimiter,
+  loginLimiter,
   validate(loginSchema),
   asyncHandler(async (req, res) => {
-    const user = await authService.login(req.validated.body);
+    const user = await authService.login(req.validated.body, { ip: req.ip });
     const session = await sessionsService.createSession(user.id);
     const token = signToken(user.id, session.id);
     res.cookie(env.COOKIE_NAME, token, cookieOptions());

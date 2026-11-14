@@ -1,10 +1,26 @@
 const AppError = require('../../utils/AppError');
-const { hashPassword, verifyPassword } = require('../../utils/password');
+const {
+  hashPassword,
+  verifyPassword,
+  verifyDummyPassword,
+} = require('../../utils/password');
 const usersService = require('../users/users.service');
+const authEvents = require('./authEvents.service');
 
-async function register({ name, email, password }) {
+function invalidCredentials() {
+  // Mismo código y mensaje para correo inexistente, contraseña errónea,
+  // cuenta inactiva o bloqueada.
+  return new AppError(
+    401,
+    'INVALID_CREDENTIALS',
+    'Correo o contraseña incorrectos',
+  );
+}
+
+async function register({ name, email, password }, { ip } = {}) {
   const existingUser = await usersService.findByEmail(email);
 
+  // Compromiso aceptado y documentado: el registro revela si el correo existe.
   if (existingUser) {
     throw new AppError(409, 'EMAIL_IN_USE', 'El correo ya está registrado');
   }
@@ -17,22 +33,41 @@ async function register({ name, email, password }) {
     role: 'estudiante',
   });
 
+  await authEvents.record('register', { userId: user.id, ip });
+
   return usersService.toPublicUser(user);
 }
 
-async function login({ email, password }) {
+async function login({ email, password }, { ip } = {}) {
   const user = await usersService.findByEmailWithPassword(email);
+
+  // Se compara SIEMPRE con bcrypt, incluso si el correo no existe, para que el
+  // tiempo de respuesta no revele qué cuentas están registradas.
   const passwordMatches = user
     ? await verifyPassword(password, user.password_hash)
-    : false;
+    : await verifyDummyPassword(password);
 
-  if (!user || !user.is_active || !passwordMatches) {
-    throw new AppError(
-      401,
-      'INVALID_CREDENTIALS',
-      'Correo o contraseña incorrectos',
-    );
+  if (!user) {
+    await authEvents.record('login_failed', { userId: null, ip });
+    throw invalidCredentials();
   }
+
+  if (user.is_locked || !user.is_active || !passwordMatches) {
+    // Un intento sobre una cuenta ya bloqueada no incrementa el contador:
+    // así el atacante no puede alargar el bloqueo indefinidamente.
+    if (!user.is_locked) {
+      const attempt = await usersService.registerFailedAttempt(user.id);
+      if (attempt?.locked_until) {
+        await authEvents.record('account_locked', { userId: user.id, ip });
+      }
+    }
+
+    await authEvents.record('login_failed', { userId: user.id, ip });
+    throw invalidCredentials();
+  }
+
+  await usersService.resetFailedAttempts(user.id);
+  await authEvents.record('login_success', { userId: user.id, ip });
 
   return usersService.toPublicUser(user);
 }

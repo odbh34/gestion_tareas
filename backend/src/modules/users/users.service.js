@@ -1,4 +1,5 @@
 const pool = require('../../config/database');
+const env = require('../../config/env');
 
 // Campos públicos: role_id, failed_attempts y locked_until son estado interno
 // y no deben salir nunca en una respuesta de la API.
@@ -47,12 +48,55 @@ async function findByEmail(email) {
 
 async function findByEmailWithPassword(email) {
   const { rows } = await pool.query(
-    `SELECT ${PUBLIC_FIELDS}, u.password_hash, u.failed_attempts, u.locked_until
+    `SELECT ${PUBLIC_FIELDS},
+            u.password_hash,
+            u.failed_attempts,
+            u.locked_until,
+            (u.locked_until IS NOT NULL AND u.locked_until > now()) AS is_locked
      ${PUBLIC_FROM}
      WHERE u.email = $1`,
     [email],
   );
   return rows[0] || null;
+}
+
+// Incremento atómico: el CASE calcula el bloqueo progresivo en la misma
+// sentencia y el WHERE impide incrementar mientras la cuenta sigue bloqueada,
+// para que un atacante no pueda prolongar el bloqueo a voluntad.
+async function registerFailedAttempt(id) {
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET failed_attempts = failed_attempts + 1,
+         locked_until = CASE
+           WHEN failed_attempts + 1 >= $2 THEN now() + make_interval(
+             secs => LEAST(
+               $3::double precision * power(2::double precision, failed_attempts + 1 - $2),
+               $4::double precision
+             )
+           )
+           ELSE locked_until
+         END,
+         updated_at = now()
+     WHERE id = $1
+       AND (locked_until IS NULL OR locked_until <= now())
+     RETURNING failed_attempts, locked_until`,
+    [
+      id,
+      env.LOCKOUT_THRESHOLD,
+      env.LOCKOUT_BASE_SECONDS,
+      env.LOCKOUT_MAX_SECONDS,
+    ],
+  );
+  return rows[0] || null;
+}
+
+async function resetFailedAttempts(id) {
+  await pool.query(
+    `UPDATE users
+     SET failed_attempts = 0, locked_until = NULL, updated_at = now()
+     WHERE id = $1`,
+    [id],
+  );
 }
 
 async function createUser({ name, email, passwordHash, role = 'estudiante' }) {
@@ -136,6 +180,8 @@ module.exports = {
   findById,
   findByEmail,
   findByEmailWithPassword,
+  registerFailedAttempt,
+  resetFailedAttempts,
   createUser,
   listUsers,
   updateRole,
