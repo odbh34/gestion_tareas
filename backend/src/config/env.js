@@ -1,6 +1,7 @@
 require('dotenv').config({ quiet: true });
 
 const { z } = require('zod');
+const { parseTrustProxy } = require('./trustProxy');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -10,6 +11,17 @@ function booleanFromEnv(defaultValue) {
     if (typeof value === 'boolean') return value;
     return ['true', '1', 'yes', 'on'].includes(String(value).toLowerCase());
   }, z.boolean());
+}
+
+function trustProxyFromEnv() {
+  return z.preprocess((value) => {
+    try {
+      return parseTrustProxy(value, 0);
+    } catch {
+      // NaN hace fallar la validación de Zod con un mensaje de configuración.
+      return Number.NaN;
+    }
+  }, z.number().int().min(0));
 }
 
 const schema = z.object({
@@ -33,7 +45,10 @@ const schema = z.object({
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:5173,http://localhost:5174,http://localhost:8080'),
-  TRUST_PROXY: booleanFromEnv(false),
+  TRUST_PROXY: trustProxyFromEnv(),
+  // Solo para diagnosticar la cadena de proxies: agrega el X-Forwarded-For
+  // crudo a los logs. Debe quedar apagado en operación normal.
+  LOG_FORWARDED_FOR: booleanFromEnv(false),
 
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
   LOCKOUT_THRESHOLD: z.coerce.number().int().positive().default(5),

@@ -15,7 +15,7 @@ const tasksRoutes = require('./modules/tasks/tasks.routes');
 
 const app = express();
 
-app.set('trust proxy', env.TRUST_PROXY ? 1 : false);
+app.set('trust proxy', env.TRUST_PROXY);
 app.disable('x-powered-by');
 
 // Evita que CDNs y proxies (por ejemplo, el rewrite de Vercel) cacheen
@@ -58,7 +58,13 @@ app.use(express.json({ limit: '10kb', strict: true }));
 app.use(cookieParser());
 
 if (!env.isTest) {
-  app.use(morgan('combined'));
+  // El formato combined es el estándar de Apache; el token xff solo se añade
+  // cuando LOG_FORWARDED_FOR está activo (medición de saltos de proxy).
+  morgan.token('xff', (req) => req.headers['x-forwarded-for'] || '-');
+  const format = env.LOG_FORWARDED_FOR
+    ? ':remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" xff=":xff"'
+    : 'combined';
+  app.use(morgan(format));
 }
 
 // Defensa CSRF adicional: SameSite=Strict + validación de Origin.
