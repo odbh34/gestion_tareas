@@ -8,16 +8,20 @@ producción real, pero permite enseñar la aplicación desde cualquier navegador
 
 ```text
 Navegador
-  │  https://sportreserve.vercel.app
+  │  https://gestion-tareas-rho.vercel.app
   ▼
 Vercel (React + rewrite /api/*)
-  │  https://sportreserve-api.onrender.com
+  │  https://sportreserve-api-srim.onrender.com
   ▼
-Render (Express + JWT)
+Cloudflare / Render (Express + JWT)
   │  postgresql://...neon.tech
   ▼
 Neon (PostgreSQL)
 ```
+
+Los nombres concretos pueden variar: Render agrega un sufijo al nombre del
+servicio y Vercel asigna un dominio propio. Usa las URLs reales de tu panel; los
+ejemplos de esta guía corresponden al despliegue actual del proyecto.
 
 La clave es que el navegador **solo habla con el dominio de Vercel**. Vercel
 reenvía `/api/*` al backend de Render. Así la cookie de sesión sigue siendo del
@@ -77,13 +81,19 @@ servicio con el plan gratuito.
 
 1. En Render, pulsa **New > Blueprint**.
 2. Conecta el repositorio de GitHub.
-3. Render detectará `render.yaml` y pedirá dos valores:
+3. Render detectará `render.yaml` y pedirá los valores marcados con
+   `sync: false`:
    - **DATABASE_URL**: la cadena pooled de Neon.
    - **CORS_ORIGINS**: de momento un valor provisional, por ejemplo
-     `https://sportreserve.vercel.app`. Lo actualizarás en el paso 4.
+     `https://gestion-tareas-rho.vercel.app`. Lo actualizarás en el paso 4.
+   - **FRONTEND_URL**: el mismo origen de Vercel, sin barra final.
+   - **SMTP_HOST / SMTP_USER / SMTP_PASS**: puedes dejarlos vacíos si no vas a
+     enviar correo. Si los llenas, usa un proveedor con API HTTPS o un plan que
+     permita SMTP; Render Free bloquea los puertos SMTP salientes.
 4. Confirma la creación. Render generará `JWT_SECRET` automáticamente y
-   configurará `NODE_ENV=production`, `COOKIE_SECURE=true` y
-   `TRUST_PROXY=true`.
+   configurará `NODE_ENV=production`, `COOKIE_SECURE=true`,
+   `TRUST_PROXY=true` (equivalente a 1) y los valores por defecto de bloqueo,
+   caducidad del token y límites.
 5. Espera a que termine el build. El comando de arranque ejecuta las
    migraciones y después inicia la API:
 
@@ -92,11 +102,11 @@ servicio con el plan gratuito.
    ```
 
 6. Copia la URL pública del servicio, por ejemplo
-   `https://sportreserve-api.onrender.com`.
+   `https://sportreserve-api-srim.onrender.com`.
 7. Verifica:
 
    ```bash
-   curl -i https://sportreserve-api.onrender.com/health
+   curl -i https://sportreserve-api-srim.onrender.com/health
    ```
 
    Debe responder `200` con `{"status":"OK","database":"up"}`. La primera
@@ -148,7 +158,7 @@ ejemplo por la URL real de Render:
 ```json
 {
   "source": "/api/:path*",
-  "destination": "https://sportreserve-api.onrender.com/api/:path*"
+  "destination": "https://sportreserve-api-srim.onrender.com/api/:path*"
 }
 ```
 
@@ -161,7 +171,7 @@ Haz commit y push de ese cambio. Después:
 4. No definas variables de entorno. El cliente usa `/api/v1` por defecto, que es
    justo lo que necesita el rewrite.
 5. Pulsa **Deploy** y copia el dominio de producción, por ejemplo
-   `https://sportreserve.vercel.app`.
+   `https://gestion-tareas-rho.vercel.app`.
 
 `frontend/vercel.json` hace lo siguiente:
 
@@ -178,11 +188,14 @@ Vuelve a Render > tu servicio > **Environment** y ajusta:
 
 | Variable | Valor |
 | --- | --- |
-| `CORS_ORIGINS` | `https://sportreserve.vercel.app` (tu dominio real de Vercel) |
+| `CORS_ORIGINS` | `https://gestion-tareas-rho.vercel.app` (tu dominio real de Vercel) |
+| `FRONTEND_URL` | El mismo origen de Vercel, sin barra final |
 | `COOKIE_SECURE` | `true` |
-| `TRUST_PROXY` | `true` |
+| `TRUST_PROXY` | Se deja en `true` hasta medir los saltos reales |
+| `LOG_FORWARDED_FOR` | `false` en operación normal |
 | `DATABASE_URL` | Cadena pooled de Neon |
 | `JWT_SECRET` | Generado por Render; no lo cambies sin motivo |
+| `SMTP_*` | Vacío si no hay correo; ver limitación más abajo |
 
 Guarda los cambios y espera el redeploy.
 
@@ -190,7 +203,7 @@ Reglas para `CORS_ORIGINS`:
 
 - Debe ser el origen exacto, con `https://` y **sin barra final**.
 - Si usas un dominio propio, añádelo separado por comas:
-  `https://tareas.example.com,https://sportreserve.vercel.app`.
+  `https://tareas.example.com,https://gestion-tareas-rho.vercel.app`.
 - No uses `*`: las cookies con credenciales no funcionan con comodín y el
   backend valida el origen también en `POST`, `PATCH` y `DELETE`.
 
@@ -211,10 +224,10 @@ Comprobaciones con `curl`:
 
 ```bash
 # Salud del backend
-curl -i https://sportreserve-api.onrender.com/health
+curl -i https://sportreserve-api-srim.onrender.com/health
 
 # La API a través de Vercel: sin sesión debe dar 401 y no debe cachearse
-curl -i https://sportreserve.vercel.app/api/v1/auth/me
+curl -i https://gestion-tareas-rho.vercel.app/api/v1/auth/me
 ```
 
 En la segunda respuesta busca:
@@ -227,7 +240,7 @@ cache-control: no-store
 Para inspeccionar la cookie de login:
 
 ```bash
-curl -i -X POST https://sportreserve.vercel.app/api/v1/auth/login \
+curl -i -X POST https://gestion-tareas-rho.vercel.app/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"estudiante@demo.com","password":"Demo12345!"}'
 ```
@@ -240,6 +253,39 @@ set-cookie: sr_token=...; Max-Age=7200; Path=/; HttpOnly; Secure; SameSite=Stric
 
 En el navegador, abre **DevTools > Application > Cookies** y comprueba que
 `sr_token` pertenece al dominio de Vercel, no al de Render.
+
+## 8.1. Migraciones, sesiones y correo
+
+Antes de desplegar esta versión sobre una base existente:
+
+1. Haz un respaldo de Neon (branch o `pg_dump`). La migración `002_roles.sql`
+   copia `users.role` a `roles`/`role_id` y después elimina la columna de texto.
+2. Las sesiones JWT anteriores no tienen `jti` y dejan de ser válidas: todos los
+   usuarios deberán iniciar sesión de nuevo. Es el comportamiento esperado.
+3. El arranque ejecuta `npm run db:migrate` antes de `npm start`; no edites
+   migraciones ya aplicadas.
+
+### Medir los saltos de proxy
+
+`TRUST_PROXY` queda en `true` (equivalente a 1) porque no se ha medido la cadena
+real. Para ajustarlo:
+
+1. Pon `LOG_FORWARDED_FOR=true` y redespliega.
+2. Desde una IP conocida, haz un login o un forgot-password.
+3. En los logs, busca `xff="..."` y cuenta los proxies a la derecha de tu IP.
+4. Ajusta `TRUST_PROXY` a ese número y apaga `LOG_FORWARDED_FOR`.
+
+La ruta directa a `*.onrender.com` puede tener menos saltos que la ruta normal
+por Vercel. Mide la que usan los usuarios. El límite por IP es “best effort”; el
+bloqueo por cuenta es la protección principal.
+
+### Correo y restablecimiento
+
+Render Free bloquea los puertos SMTP salientes. Sin un proveedor con API HTTPS o
+un plan de pago, `POST /auth/forgot-password` responde `202` pero no envía el
+correo; el restablecimiento queda inoperante. No es un fallo silencioso: la
+respuesta es la misma y el backend registra una advertencia sin token. El login,
+el bloqueo y el cambio de contraseña siguen funcionando.
 
 ## 9. Límites gratuitos y comportamiento esperado
 
@@ -267,7 +313,9 @@ entrega puntual, es mejor abrir la web unos minutos antes.
 - **Seed**: no se ejecuta automáticamente; es intencional.
 
 No cambies `JWT_SECRET` si no quieres invalidar todas las sesiones. Tampoco
-edites una migración ya aplicada: crea una nueva.
+edites una migración ya aplicada: crea una nueva. Un despliegue que cambie el
+esquema de sesiones invalida las cookies existentes; avisa a los usuarios si es
+una demo compartida.
 
 ## 11. Problemas frecuentes
 
@@ -283,6 +331,10 @@ edites una migración ya aplicada: crea una nueva.
 | `404` al refrescar `/tasks` | Falta el fallback SPA | Revisa la segunda regla de `frontend/vercel.json` |
 | `404` en `/api/...` | Destino de ejemplo sin sustituir | Pon la URL real de Render y redeploy |
 | El deploy de Render falla en el health check | La API no conecta con Neon | Revisa `DATABASE_URL`, SSL y logs |
+| `relation "roles" does not exist` | Migración `002` no aplicada | Revisa que el start command ejecute `db:migrate` |
+| Todos pierden la sesión tras actualizar | JWT anteriores sin `jti` | Esperado; vuelve a iniciar sesión |
+| No llega el correo de reset | SMTP vacío o puerto bloqueado | Configura un proveedor HTTPS o asume la limitación |
+| El rate limit agrupa a todos los usuarios | `TRUST_PROXY` sin medir | Mide con `LOG_FORWARDED_FOR` y ajusta el número |
 
 ## 12. Alternativas gratuitas
 
@@ -303,8 +355,13 @@ mejor conserva el comportamiento de las cookies.
 - [ ] Seed ejecutado y usuarios demo creados.
 - [ ] `frontend/vercel.json` apunta a la URL real de Render.
 - [ ] Frontend desplegado en Vercel con Root Directory `frontend`.
-- [ ] `CORS_ORIGINS` contiene el dominio exacto de Vercel.
+- [ ] `CORS_ORIGINS` y `FRONTEND_URL` contienen el dominio exacto de Vercel.
 - [ ] Login, CRUD, administración y logout probados desde el dominio de Vercel.
 - [ ] Cookie `sr_token` visible en el dominio de Vercel con `HttpOnly`, `Secure`
       y `SameSite=Strict`.
 - [ ] `/api/v1/auth/me` responde `401` sin sesión y `Cache-Control: no-store`.
+- [ ] Migraciones `002` y `003` aplicadas; `users.role` ya no existe.
+- [ ] `TRUST_PROXY` medido o marcado explícitamente como pendiente.
+- [ ] `LOG_FORWARDED_FOR=false` en operación normal.
+- [ ] SMTP probado o restablecimiento documentado como inoperante.
+- [ ] Logout y cambio de contraseña invalidan la cookie anterior.

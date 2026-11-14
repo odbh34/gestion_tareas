@@ -89,6 +89,15 @@ Si sobra tiempo o se solicita un valor adicional:
 
 Cada extensión debe entrar por una rama `feature/*`, con pruebas y PR.
 
+Estado de las extensiones en la rama `feature/seguridad-auth`:
+
+- **E01** (recuperación con token de un solo uso): implementada en backend y
+  verificada manualmente; faltan las pruebas automatizadas de R5 y la UI.
+- **E02** (perfil y cambio de contraseña): el cambio de contraseña está
+  implementado en backend; la pantalla de perfil queda pendiente.
+- Las pruebas automatizadas de R5 se asignan a otro integrante y deben entrar en
+  una rama `test/*` antes de fusionar a `main`.
+
 ## 4. Flujo Git
 
 ### Ramas
@@ -258,10 +267,10 @@ Una tarea está terminada cuando:
 | Minuto | Quién | Contenido |
 | --- | --- | --- |
 | 0–2 | A | Problema, alcance y arquitectura |
-| 2–5 | A | Registro, login, cookie y control de acceso |
+| 2–5 | A | Registro, login, cookie, bloqueo progresivo, logout y control de acceso |
 | 5–8 | B | Demo de tareas: crear, filtrar, editar y eliminar |
 | 8–10 | B | Demo de administración de roles y diferencias entre roles |
-| 10–12 | C | Pruebas, seguridad y CI |
+| 10–12 | C | Pruebas, evidencia manual de reset/bloqueo, seguridad y CI |
 | 12–14 | C | Docker, despliegue y documentación |
 | 14–15 | Todos | Conclusiones y preguntas |
 

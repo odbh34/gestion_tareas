@@ -33,12 +33,32 @@ obligatorio. La plantilla está en `backend/.env.example`.
 | `COOKIE_NAME` | No | Nombre de la cookie (`sr_token`) |
 | `COOKIE_SECURE` | No | `true` obligatorio con HTTPS |
 | `CORS_ORIGINS` | No | Orígenes separados por coma |
-| `TRUST_PROXY` | No | `true` detrás de proxy inverso |
+| `TRUST_PROXY` | No | Número de proxies de confianza (`0` sin proxy, `1` Nginx de Compose). `true` se acepta como `1` por compatibilidad |
+| `LOG_FORWARDED_FOR` | No | `true` agrega el `X-Forwarded-For` crudo al log; apagado por defecto |
+| `LOCKOUT_THRESHOLD` | No | Fallos antes de bloquear (5 por defecto) |
+| `LOCKOUT_BASE_SECONDS` | No | Bloqueo inicial (60 s) |
+| `LOCKOUT_MAX_SECONDS` | No | Tope del bloqueo (900 s) |
+| `FRONTEND_URL` | Sí para reset | Origen del frontend para construir el enlace de restablecimiento |
+| `RESET_TOKEN_TTL_MINUTES` | No | Caducidad del token de reset (15 min) |
+| `SMTP_HOST` | No | Servidor SMTP; vacío = no se envían correos |
+| `SMTP_PORT` | No | Puerto SMTP (2525 por defecto; Mailpit usa 1025 en Compose) |
+| `SMTP_SECURE` | No | `true` para TLS implícito |
+| `SMTP_USER` / `SMTP_PASS` | No | Credenciales SMTP; nunca en el repositorio |
+| `MAIL_FROM` | No | Remitente de los correos |
 | `BCRYPT_ROUNDS` | No | 10–14 (12 por defecto) |
 | `RATE_LIMIT_ENABLED` | No | Activa/desactiva límites |
-| `RATE_LIMIT_AUTH_MAX` | No | Intentos de auth por ventana |
+| `RATE_LIMIT_AUTH_MAX` | No | Solicitudes de registro por ventana (10) |
 | `RATE_LIMIT_GLOBAL_MAX` | No | Solicitudes globales por ventana |
 | `SEED_*_PASSWORD` | No | Contraseñas de usuarios demo |
+
+Límites de autenticación por IP y ventana de 15 minutos: login 20 fallos,
+registro 10 solicitudes, forgot-password 5 solicitudes.
+
+### Correo en desarrollo
+
+Compose levanta Mailpit y apunta el backend a `smtp://mailpit:1025`; la bandeja
+está en <http://127.0.0.1:8025>. No se publica el puerto SMTP al host. En
+producción, Mailpit no existe.
 
 Generar un secreto:
 
@@ -129,6 +149,7 @@ Servicios:
 - Frontend: http://localhost:5174
 - API: http://localhost:3001
 - PostgreSQL: `localhost:5433`
+- Mailpit: http://127.0.0.1:8025
 
 Sembrar datos demo:
 
@@ -175,13 +196,42 @@ servicio `backend`.
 - [ ] `JWT_SECRET` aleatorio y almacenado en un gestor de secretos.
 - [ ] `COOKIE_SECURE=true` y HTTPS obligatorio.
 - [ ] `CORS_ORIGINS` con el dominio real, sin comodines.
-- [ ] `TRUST_PROXY=true` si hay proxy inverso.
+- [ ] `FRONTEND_URL` con el origen real (para el enlace de reset).
+- [ ] `TRUST_PROXY` medido y ajustado al número de saltos; no asumirlo.
+- [ ] `LOG_FORWARDED_FOR=false` en operación normal (activarlo solo para medir).
+- [ ] `JWT_SECRET` y credenciales SMTP fuera del repositorio.
+- [ ] SMTP configurado (o restablecimiento asumido como inoperante).
 - [ ] Contraseña de base robusta y usuario sin privilegios de superusuario.
+- [ ] Respaldo antes de aplicar `002_roles.sql` (elimina `users.role`).
 - [ ] Respaldos automáticos y prueba de restauración.
 - [ ] Rate limiting con almacén compartido si hay varias instancias.
 - [ ] Logs centralizados y alertas de errores 5xx.
 - [ ] Migraciones ejecutadas antes de habilitar tráfico.
 - [ ] Seed deshabilitado (solo se ejecuta con `ALLOW_SEED=true`).
+
+### Medir los saltos de proxy
+
+El límite por IP necesita la IP real del cliente. No se fijó `TRUST_PROXY` en
+producción porque la cadena Vercel → Cloudflare → Render → Node no se ha medido.
+
+1. Pon `LOG_FORWARDED_FOR=true` y redespliega.
+2. Desde una IP conocida, haz una petición al backend (por ejemplo,
+   `/auth/login`).
+3. Mira el log: `xff="cliente, proxy1, proxy2, ..."`. Cuenta cuántos proxies hay
+   **a la derecha** de la IP conocida; ese es el número de saltos de confianza.
+4. Ajusta `TRUST_PROXY` a ese número y vuelve a poner
+   `LOG_FORWARDED_FOR=false`.
+
+Acceder directamente al dominio `*.onrender.com` puede tener un número de saltos
+distinto al de acceder por Vercel. Mide la ruta que usan los usuarios. El límite
+por IP es “best effort”; el control principal es el bloqueo por cuenta.
+
+### Restablecimiento en producción
+
+Render Free bloquea los puertos SMTP salientes. Sin un proveedor con API HTTPS o
+un plan que permita SMTP, `POST /auth/forgot-password` responderá `202` pero no
+enviará correo. El login, el bloqueo y el cambio de contraseña siguen
+funcionando. Está documentado como limitación, no como fallo silencioso.
 
 ### Backend
 
@@ -235,6 +285,10 @@ Comprobar:
 - Un origen no permitido recibe `403`.
 - El registro crea usuarios con rol `estudiante`.
 - Un estudiante no puede acceder a tareas ajenas.
+- El login devuelve el mismo `401` para correo inexistente y clave incorrecta.
+- Logout invalida la cookie (`/auth/me` devuelve `401`).
+- La migración `002_roles.sql` se aplicó y `users.role` ya no existe.
+- `LOG_FORWARDED_FOR` está apagado y no se registran tokens ni contraseñas.
 - Los logs no muestran contraseñas ni tokens.
 
 ## 7. Problemas frecuentes
@@ -248,3 +302,7 @@ Comprobar:
 | Cookie no se guarda | `SameSite`/dominio/HTTPS mal configurado | Revisa `COOKIE_SECURE`, dominio y proxy |
 | `403 CORS_NOT_ALLOWED` | Origen no incluido | Agrega el origen exacto a `CORS_ORIGINS` |
 | Migración con checksum distinto | Se editó una migración aplicada | Crea una migración nueva |
+| Todos los usuarios pierden la sesión tras desplegar | JWT antiguos sin `jti` | Esperado; vuelve a iniciar sesión |
+| No llega el correo de reset | SMTP vacío o bloqueado | Configura SMTP; Render Free bloquea puertos SMTP |
+| Todos los intentos comparten IP | `TRUST_PROXY` mal ajustado | Mide con `LOG_FORWARDED_FOR` y ajusta el número de saltos |
+| `users.role does not exist` | Código viejo contra esquema nuevo | Despliega el código de esta rama junto con las migraciones |

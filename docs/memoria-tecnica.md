@@ -65,6 +65,11 @@ personas pueda mantenerla y evolucionarla.
 ### Incluido
 
 - Autenticación con correo y contraseña.
+- Sesiones por dispositivo con revocación y rotación.
+- Bloqueo progresivo por cuenta y límites por IP.
+- Restablecimiento de contraseña por correo con token de un solo uso.
+- Cambio de contraseña autenticado.
+- Auditoría de eventos de autenticación.
 - Gestión de tareas propias.
 - Lectura global para docentes y administradores.
 - CRUD global para administradores.
@@ -75,12 +80,13 @@ personas pueda mantenerla y evolucionarla.
 
 ### Excluido de esta versión
 
-- Recuperación de contraseña por correo.
+- Interfaz de restablecimiento y cambio de contraseña (los endpoints existen;
+  la UI quedó para una fase posterior).
 - Verificación de correo electrónico.
 - Adjuntos o comentarios en tareas.
 - Notificaciones en tiempo real.
 - Multi-tenant o múltiples organizaciones.
-- Auditoría detallada de cambios.
+- Auditoría detallada de cambios de tareas.
 - Aplicación móvil nativa.
 
 ## 6. Arquitectura
@@ -129,6 +135,16 @@ la API completa con Supertest sin levantar un servidor externo.
 
 ## 7. Modelo de datos
 
+### Tabla `roles`
+
+| Columna | Tipo | Restricción |
+| --- | --- | --- |
+| `id` | SMALLINT | PK |
+| `name` | TEXT | único, minúsculas, 3–30 caracteres |
+| `description` | TEXT | descripción del rol |
+
+Catálogo: `estudiante` (1), `docente` (2), `administrador` (3).
+
 ### Tabla `users`
 
 | Columna | Tipo | Restricción |
@@ -137,8 +153,10 @@ la API completa con Supertest sin levantar un servidor externo.
 | `name` | TEXT | 2–80 caracteres |
 | `email` | TEXT | único, minúsculas |
 | `password_hash` | TEXT | bcrypt |
-| `role` | TEXT | `estudiante`, `docente`, `administrador` |
+| `role_id` | SMALLINT | FK a `roles.id`, `ON DELETE RESTRICT` |
 | `is_active` | BOOLEAN | por defecto `true` |
+| `failed_attempts` | INTEGER | por defecto 0, `>= 0` |
+| `locked_until` | TIMESTAMPTZ | `NULL` si no está bloqueada |
 | `created_at` | TIMESTAMPTZ | por defecto `now()` |
 | `updated_at` | TIMESTAMPTZ | por defecto `now()` |
 
@@ -154,31 +172,109 @@ la API completa con Supertest sin levantar un servidor externo.
 | `created_at` | TIMESTAMPTZ | por defecto `now()` |
 | `updated_at` | TIMESTAMPTZ | por defecto `now()` |
 
-Índices: `users(email)` por la restricción única, `users(role)`,
-`users(created_at)`, `tasks(owner_id)`, `tasks(status)` y `tasks(created_at)`.
+### Tabla `sessions`
+
+| Columna | Tipo | Restricción |
+| --- | --- | --- |
+| `id` | UUID | PK, `gen_random_uuid()` |
+| `user_id` | UUID | FK a `users.id`, `ON DELETE CASCADE` |
+| `created_at` | TIMESTAMPTZ | por defecto `now()` |
+| `expires_at` | TIMESTAMPTZ | obligatorio |
+| `revoked_at` | TIMESTAMPTZ | `NULL` mientras está activa |
+
+### Tabla `password_reset_tokens`
+
+| Columna | Tipo | Restricción |
+| --- | --- | --- |
+| `id` | UUID | PK |
+| `user_id` | UUID | FK a `users.id`, `ON DELETE CASCADE` |
+| `token_hash` | TEXT | único (SHA-256 hexadecimal) |
+| `expires_at` | TIMESTAMPTZ | obligatorio |
+| `used_at` | TIMESTAMPTZ | `NULL` mientras no se use |
+| `created_at` | TIMESTAMPTZ | por defecto `now()` |
+
+### Tabla `auth_events`
+
+| Columna | Tipo | Restricción |
+| --- | --- | --- |
+| `id` | BIGINT | identidad |
+| `user_id` | UUID | FK a `users.id`, `ON DELETE SET NULL`, nullable |
+| `event_type` | TEXT | lista cerrada con `CHECK` |
+| `ip` | TEXT | hasta 64 caracteres |
+| `created_at` | TIMESTAMPTZ | por defecto `now()` |
+
+Índices: `users(email)`, `users(role_id)`, `users(created_at)`,
+`tasks(owner_id)`, `tasks(status)`, `tasks(created_at)`, `sessions(user_id)`,
+`password_reset_tokens(user_id)`, `auth_events(user_id, created_at)` y
+`auth_events(event_type, created_at)`.
 
 ### Migraciones
 
-`database/migrations/001_initial.sql` crea el esquema. El script
-`backend/src/db/migrate.js` registra cada archivo en `schema_migrations` con un
-checksum SHA-256; si un archivo ya aplicado cambia, la migración falla y obliga
-a crear una nueva. Las migraciones se ejecutan automáticamente al iniciar el
-contenedor del backend.
+- `001_initial.sql`: esquema inicial.
+- `002_roles.sql`: catálogo `roles`, `users.role_id` y eliminación de
+  `users.role`.
+- `003_auth_security.sql`: bloqueo, sesiones, tokens de reset y auditoría.
+
+El script `backend/src/db/migrate.js` registra cada archivo en
+`schema_migrations` con un checksum SHA-256; si un archivo ya aplicado cambia,
+la migración falla y obliga a crear una nueva. Las migraciones se ejecutan
+automáticamente al iniciar el contenedor del backend.
 
 ## 8. Autenticación y sesión
 
+### Registro
+
 1. El usuario se registra con nombre, correo y contraseña.
 2. El servidor normaliza el correo y verifica que no exista.
-3. La contraseña se cifra con bcrypt (12 rondas por defecto).
-4. El registro siempre asigna el rol `estudiante`.
-5. En el login se comparan las credenciales y se firma un JWT HS256 con
-   `sub`, `iss`, `aud`, expiración y algoritmo fijado.
-6. El token se envía en una cookie `HttpOnly`, `SameSite=Strict`, `Path=/` y
-   `Secure` según el entorno.
-7. En cada solicitud protegida, el middleware verifica el JWT y vuelve a
-   consultar al usuario en la base. Si está inactivo o no existe, la sesión se
-   invalida.
-8. El logout elimina la cookie.
+3. La contraseña se valida (mínimo 10 caracteres, máximo 72 bytes UTF-8) y se
+   cifra con bcrypt (12 rondas por defecto).
+4. El registro siempre asigna el rol `estudiante` mediante `role_id`.
+5. Se registra el evento `register` con la IP, sin correo.
+
+### Login y bloqueo
+
+1. Se busca el usuario por correo. Si no existe, se compara igualmente contra un
+   hash ficticio para que el tiempo no revele si la cuenta existe.
+2. Correo inexistente, contraseña incorrecta, cuenta inactiva o bloqueada
+   devuelven el mismo `401 INVALID_CREDENTIALS`.
+3. Si la cuenta está bloqueada, no se incrementa el contador ni se prolonga el
+   bloqueo.
+4. Si la contraseña es incorrecta, un `UPDATE` atómico incrementa
+   `failed_attempts`. Al llegar a 5 fallos se calcula `locked_until` con
+   `min(60 · 2^(n − 5), 900)` segundos.
+5. Un login correcto reinicia el contador y crea una sesión nueva.
+6. Si la petición traía una sesión válida del mismo usuario, se revoca antes de
+   crear la nueva (rotación).
+7. El JWT HS256 incluye `sub`, `jti`, `iss`, `aud`, `exp` y algoritmo fijado.
+   `jti` es el id de la fila de `sessions`.
+8. La cookie es `HttpOnly`, `SameSite=Strict`, `Path=/` y `Secure` según el
+   entorno.
+
+### Peticiones autenticadas
+
+El middleware verifica la firma y el `exp` del JWT, exige `jti` y consulta:
+
+```sql
+SELECT ... FROM sessions s
+JOIN users u ON u.id = s.user_id
+WHERE s.id = $1 AND s.user_id = $2
+  AND s.revoked_at IS NULL
+  AND s.expires_at > now()
+  AND u.is_active;
+```
+
+La caducidad se evalúa con el reloj de PostgreSQL. Un token revocado, vencido,
+sin `jti` o de un usuario inactivo devuelve `401 INVALID_SESSION`.
+
+### Logout, cambio y restablecimiento
+
+- **Logout**: revoca la sesión y limpia la cookie; siempre responde `204`.
+- **Cambio de contraseña**: exige la contraseña actual, actualiza el hash, revoca
+  todas las sesiones y emite una nueva cookie.
+- **Restablecimiento**: token aleatorio de 32 bytes, guardado solo como SHA-256,
+  de un solo uso y con caducidad. El enlace viaja en el fragmento de la URL. El
+  éxito cambia la contraseña, anula los tokens pendientes, revoca todas las
+  sesiones y desbloquea la cuenta.
 
 El frontend nunca lee el token: solo envía la cookie con
 `credentials: 'include'`. Esto reduce el riesgo de robo de tokens mediante
@@ -208,11 +304,12 @@ en lugar de `403` para no revelar la existencia del recurso.
 | XSS | React escapa por defecto; no se usa `dangerouslySetInnerHTML`; CSP en backend y Nginx |
 | IDOR | Verificación de propiedad en lectura, edición y borrado |
 | Mass assignment | Esquemas Zod `.strict()`; el rol y el dueño no se aceptan del cliente |
-| Fuerza bruta | Rate limit global y límite más estricto en `/auth` |
+| Fuerza bruta | Bloqueo progresivo por cuenta (60–900 s) + límites por IP (login 20, registro 10, forgot 5) |
 | CSRF | `SameSite=Strict`, CORS con lista blanca y validación de `Origin` |
 | Clickjacking | `X-Frame-Options: DENY` y `frame-ancestors 'none'` |
-| Fijación de sesión | JWT firmado con expiración y cookie reemplazada en cada login |
-| Enumeración de usuarios | Mensaje genérico en login y `404` en recursos ajenos |
+| Fijación de sesión | `jti` por dispositivo, rotación al reautenticarse y revocación en logout |
+| Reutilización de tokens | Token de reset de un solo uso, solo SHA-256, caducidad y anulación de pendientes |
+| Enumeración de usuarios | Mensaje genérico y hash ficticio en login; `404` en recursos ajenos. El registro conserva `409` como compromiso |
 | Escalada de privilegios | Rol asignado en servidor; cambio de rol solo por administrador |
 | Fuga de información | `x-powered-by` deshabilitado; errores internos no expuestos |
 | Cacheo de respuestas | `Cache-Control: no-store` en `/api`; rewrite de Vercel sin caché |
@@ -222,21 +319,34 @@ en lugar de `403` para no revelar la existencia del recurso.
 - **JWT en cookie en lugar de `localStorage`**: evita el acceso desde
   JavaScript, a costa de requerir protección CSRF, cubierta con `SameSite` y
   validación de `Origin`.
-- **Sin ORM**: las consultas son explícitas y parametrizadas; se gana control y
-  se pierde comodidad para consultas complejas.
-- **Sesión consulta la base en cada solicitud**: permite desactivar usuarios de
-  inmediato; tiene un costo adicional por petición aceptable para este alcance.
+- **Sesión consulta la base en cada solicitud**: permite revocar y expirar
+  sesiones de inmediato; tiene un costo adicional por petición aceptable para
+  este alcance.
+- **Sesiones por dispositivo**: cada login genera una fila y un `jti`; el logout
+  revoca solo ese dispositivo, mientras que el cambio y el restablecimiento
+  revocan todas.
+- **Bloqueo en base + rate limit en memoria**: el bloqueo por cuenta persiste y
+  es la protección principal; el límite por IP es “best effort” y depende del
+  proxy.
+- **Token de reset hasheado**: la base no puede reconstruir el enlace; si se
+  pierde el correo, hay que solicitar otro.
 - **`404` en lugar de `403` para tareas ajenas**: prioriza la confidencialidad
   sobre la explicitud del error.
 
 ### Limitaciones conocidas
 
-- No hay verificación de correo ni recuperación de contraseña.
-- El rate limit usa memoria del proceso; en varias instancias se necesita un
-  almacén compartido (Redis).
-- No se implementó rotación de JWT ni lista de revocación.
-- La configuración de Docker debe validarse en un entorno con Docker activo y
-  con los secretos adecuados.
+- El rate limit por IP usa memoria del proceso; con varias instancias hace falta
+  un almacén compartido (Redis). El bloqueo por cuenta sí está en PostgreSQL.
+- `TRUST_PROXY` en producción (Cloudflare/Render) no se asumió: hay que medir los
+  saltos con `LOG_FORWARDED_FOR` antes de ajustarlo. Mientras tanto, el límite
+  por IP puede compartir la IP del proxy.
+- Sin SMTP configurado, el restablecimiento no envía correo. Render Free bloquea
+  los puertos SMTP; se necesita un proveedor con API HTTPS o un plan superior.
+- El registro revela si un correo existe (`409 EMAIL_IN_USE`), por compatibilidad
+  con el cliente y las pruebas existentes.
+- No hay verificación de correo electrónico.
+- La UI de restablecimiento y cambio de contraseña no está implementada; el
+  backend expone los endpoints.
 - Para producción real se requiere HTTPS, `COOKIE_SECURE=true` y secretos
   gestionados fuera del repositorio.
 
@@ -251,7 +361,10 @@ Resumen:
 | --- | --- | --- |
 | POST | `/auth/register` | Público |
 | POST | `/auth/login` | Público |
-| POST | `/auth/logout` | Público |
+| POST | `/auth/logout` | Público (idempotente) |
+| POST | `/auth/change-password` | Autenticado |
+| POST | `/auth/forgot-password` | Público |
+| POST | `/auth/reset-password` | Público con token |
 | GET | `/auth/me` | Autenticado |
 | GET | `/tasks` | Autenticado (filtrado por rol) |
 | POST | `/tasks` | Autenticado |
@@ -275,14 +388,22 @@ Formato de error uniforme:
 
 ## 12. Pruebas
 
-Se implementaron 39 pruebas de backend y 3 de frontend. Las pruebas de backend
-se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y cubren:
+Se implementaron 41 pruebas de backend (5 archivos) y 3 de frontend. Las pruebas
+de backend se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y
+cubren:
 
 - Registro, login, logout, sesión y usuarios inactivos.
 - CRUD, filtros, paginación y validación.
 - IDOR, RBAC, mass assignment, SQLi y XSS.
 - Cabeceras de seguridad, CORS y manejo de errores.
 - Límite de tamaño de solicitudes.
+- Parseo numérico de `TRUST_PROXY`.
+
+Las pruebas automatizadas de los flujos nuevos (mensaje genérico, fuerza bruta,
+reutilización de token y sesión expirada) quedaron delegadas a otro integrante
+(R5). Su comportamiento se verificó manualmente; el detalle y los comandos están
+en [`evidencia-auth.md`](evidencia-auth.md) y la trazabilidad en
+[`matriz-cumplimiento-1-2.md`](matriz-cumplimiento-1-2.md).
 
 El frontend prueba que React renderiza contenido peligroso como texto y que las
 acciones solo aparecen cuando el usuario puede editar.
@@ -304,11 +425,19 @@ La CI se ejecuta en cada push a `main` o `develop` y en cada Pull Request.
 La guía completa está en [`despliegue.md`](despliegue.md). Resumen:
 
 - **Desarrollo local**: PostgreSQL + `npm run dev` en backend y frontend.
-- **Docker local**: `docker compose up --build`.
+- **Docker local**: `docker compose up --build`, con Mailpit para correo.
 - **Producción**: backend con `NODE_ENV=production`, HTTPS, cookie segura,
   base gestionada, secretos externos y Nginx como proxy inverso.
 - **Demo gratuita**: Neon (PostgreSQL) + Render (backend) + Vercel (frontend con
   rewrite `/api`), detallada en [`despliegue-gratuito.md`](despliegue-gratuito.md).
+
+Antes de desplegar esta versión hay que tener en cuenta:
+
+- La migración `002_roles.sql` elimina `users.role`; conviene un respaldo previo.
+- Las sesiones existentes quedan inválidas al cambiar a JWT con `jti`.
+- `TRUST_PROXY` debe medirse con `LOG_FORWARDED_FOR`; no se fijó un valor de
+  producción a ciegas.
+- Sin SMTP real, el restablecimiento no envía correo en producción.
 
 ## 15. Trabajo en equipo
 
@@ -325,11 +454,14 @@ Las tareas tienen dependencias y criterios de aceptación en
 ## 16. Conclusiones
 
 La aplicación cumple el alcance funcional solicitado y agrega controles de
-seguridad verificables mediante pruebas. La separación por módulos, la
-validación estricta y el uso de consultas parametrizadas facilitan el
-mantenimiento. La documentación y la CI permiten que los tres integrantes
-trabajen en paralelo con un criterio común de calidad.
+seguridad verificables: roles normalizados, sesiones revocables por dispositivo,
+bloqueo progresivo, restablecimiento con token de un solo uso y auditoría. La
+separación por módulos, la validación estricta y el uso de consultas
+parametrizadas facilitan el mantenimiento. La documentación y la CI permiten que
+los tres integrantes trabajen en paralelo con un criterio común de calidad.
 
-Como siguiente etapa se recomienda agregar recuperación de contraseña,
-verificación de correo, auditoría de cambios y un almacén compartido para rate
-limiting antes de un despliegue con múltiples instancias.
+Como siguiente etapa se recomienda completar la interfaz de restablecimiento y
+cambio de contraseña, agregar las pruebas automatizadas de R5, configurar un
+proveedor de correo con API HTTPS para producción, medir los saltos reales de
+proxy y añadir un almacén compartido para rate limiting si se ejecutan varias
+instancias.

@@ -7,13 +7,19 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 ## Funcionalidades
 
 - Registro e inicio de sesión con contraseñas cifradas (bcrypt).
-- Sesión mediante JWT en cookie `HttpOnly`, `SameSite=Strict`.
+- Sesiones por dispositivo en base de datos, con JWT en cookie `HttpOnly`,
+  `SameSite=Strict` y revocación inmediata.
+- Bloqueo progresivo de la cuenta tras intentos fallidos y límite de intentos
+  por IP.
+- Restablecimiento de contraseña por correo con token de un solo uso y cambio
+  de contraseña autenticado.
+- Auditoría de eventos de autenticación sin datos sensibles.
 - CRUD de tareas con título, descripción, estado y dueño.
 - Roles **estudiante**, **docente** y **administrador**.
 - Búsqueda, filtro por estado, ordenamiento y paginación.
 - Administración de usuarios y roles (solo administrador).
 - Pruebas de API, seguridad (IDOR, SQLi, XSS, RBAC) e interfaz.
-- Docker Compose con PostgreSQL, backend y frontend Nginx.
+- Docker Compose con PostgreSQL, backend, frontend Nginx y Mailpit.
 - Integración continua con GitHub Actions.
 
 ## Stack
@@ -23,7 +29,8 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 | Backend | Node.js 22 + Express 5 |
 | Base de datos | PostgreSQL 17, SQL parametrizado (sin ORM) |
 | Frontend | React 19 + Vite 8 |
-| Autenticación | JWT + cookie HttpOnly, bcryptjs |
+| Autenticación | JWT con `jti` + sesiones en PostgreSQL, cookie HttpOnly, bcryptjs |
+| Correo | Nodemailer + Mailpit en desarrollo |
 | Validación | Zod |
 | Pruebas | Vitest + Supertest + Testing Library |
 | Contenedores | Docker + Docker Compose + Nginx |
@@ -51,10 +58,10 @@ desde el cuerpo de la solicitud.
 │   │   ├── config/          Variables de entorno y pool de PostgreSQL
 │   │   ├── db/              Migraciones, seed y creación de BD de pruebas
 │   │   ├── middleware/      Auth, RBAC, validación, rate limit, errores
-│   │   ├── modules/         auth, users y tasks
-│   │   └── utils/           JWT, contraseñas, errores, asyncHandler
+│   │   ├── modules/         auth (sesiones, reset, eventos), users y tasks
+│   │   └── utils/           JWT, contraseñas, correo, errores, asyncHandler
 │   └── tests/               Pruebas de API y seguridad
-├── database/migrations/     Esquema SQL versionado
+├── database/migrations/     Esquema SQL versionado (001, 002 y 003)
 ├── frontend/                React + Vite
 ├── docs/                    Memoria técnica y guías
 ├── compose.yaml             PostgreSQL + backend + frontend
@@ -85,6 +92,11 @@ Servicios publicados en el host:
 | Aplicación web | http://localhost:5174 |
 | API | http://localhost:3001 |
 | PostgreSQL | `localhost:5433` |
+| Mailpit (correo de pruebas) | http://127.0.0.1:8025 |
+
+Mailpit recibe los correos de restablecimiento en desarrollo. En producción hace
+falta configurar SMTP real; sin él, el endpoint responde igual pero no se envía
+nada.
 
 Los puertos se eligieron para no chocar con un entorno local que ya use
 `3000`, `5173` o `5432`. Puedes cambiarlos en `compose.yaml`.
@@ -165,7 +177,7 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 39 pruebas
+npm test                  # 41 pruebas
 npm run test:coverage
 npm run lint
 
@@ -177,18 +189,32 @@ npm run build
 ```
 
 Las pruebas del backend requieren la base `sportreserve_test`. Las migraciones
-se aplican automáticamente antes de ejecutar la suite.
+se aplican automáticamente antes de ejecutar la suite. Si usas el PostgreSQL de
+Docker, está publicado en `5433`: ejecuta `POSTGRES_PORT=5433 npm test` o ajusta
+`POSTGRES_PORT` en tu `backend/.env`.
+
+Las pruebas automatizadas específicas de los flujos nuevos de seguridad (R5)
+quedaron delegadas a otro integrante. La evidencia manual reproducible está en
+[`docs/evidencia-auth.md`](docs/evidencia-auth.md) y el estado por requisito en
+[`docs/matriz-cumplimiento-1-2.md`](docs/matriz-cumplimiento-1-2.md).
 
 ## Seguridad implementada
 
-- Contraseñas con bcrypt (12 rondas por defecto).
-- JWT firmado con HS256, emisor y audiencia verificados.
+- Contraseñas con bcrypt (12 rondas por defecto) y política de 10 caracteres /
+  72 bytes UTF-8.
+- JWT firmado con HS256, emisor y audiencia verificados; el claim `jti`
+  identifica una sesión revocable.
 - Cookie `HttpOnly`, `SameSite=Strict` y `Secure` configurable.
+- Mensaje genérico en login, con comparación bcrypt ficticia para correos
+  inexistentes.
+- Bloqueo progresivo por cuenta (60 s a 900 s) y límites por IP (login 20,
+  registro 10, forgot 5 por 15 minutos).
+- Token de restablecimiento de un solo uso, guardado solo como SHA-256 y enviado
+  en el fragmento de la URL.
 - Validación estricta con Zod (rechaza campos desconocidos).
 - Consultas SQL siempre parametrizadas.
 - Control de acceso por rol y por propiedad del recurso.
 - Respuestas `404` para recursos ajenos, evitando enumerar IDs.
-- Rate limiting global y específico en autenticación.
 - Helmet, CSP, CORS con lista blanca y validación de `Origin`.
 - Límite de tamaño del cuerpo JSON (10 kb).
 - React escapa el contenido por defecto (sin `dangerouslySetInnerHTML`).
@@ -200,6 +226,9 @@ Los detalles y las limitaciones se explican en
 
 - [Memoria técnica](docs/memoria-tecnica.md)
 - [Referencia de la API](docs/api.md)
+- [Flujos de autenticación](docs/auth-flujo.md)
+- [Matriz de cumplimiento del ejercicio 1.2](docs/matriz-cumplimiento-1-2.md)
+- [Evidencia manual de autenticación](docs/evidencia-auth.md)
 - [Estrategia y casos de prueba](docs/pruebas.md)
 - [Guía de despliegue](docs/despliegue.md)
 - [Despliegue gratuito: Neon + Render + Vercel](docs/despliegue-gratuito.md)

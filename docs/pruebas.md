@@ -35,12 +35,21 @@ npm test
 - Desactiva el rate limit para no interferir con las pruebas.
 - Reduce bcrypt a 10 rondas.
 - Aplica migraciones antes de la suite.
+- Usa una bandeja de correo en memoria (no envía SMTP).
 - Cierra el pool al terminar.
 
 Cada archivo limpia las tablas con
-`TRUNCATE TABLE tasks, users RESTART IDENTITY CASCADE` antes de cada prueba.
-Vitest se configura con `fileParallelism: false` para evitar carreras sobre la
-misma base.
+`TRUNCATE TABLE auth_events, password_reset_tokens, sessions, tasks, users
+RESTART IDENTITY CASCADE` antes de cada prueba. La tabla `roles` no se trunca:
+es un catálogo fijo de la migración `002_roles.sql`. Vitest se configura con
+`fileParallelism: false` para evitar carreras sobre la misma base.
+
+Si usas el PostgreSQL de Docker (publicado en `5433`) y tu `backend/.env` apunta
+a `5432`, ejecuta:
+
+```bash
+POSTGRES_PORT=5433 npm test
+```
 
 ### Frontend
 
@@ -128,6 +137,30 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | JSON malformado | `400 INVALID_JSON` |
 | Cuerpo mayor a 10 kb | `413 PAYLOAD_TOO_LARGE` |
 
+### `tests/config.test.js` — configuración
+
+| Caso | Resultado esperado |
+| --- | --- |
+| `TRUST_PROXY=0/1/2` | Devuelve el número de saltos |
+| `true` / `false` | `1` / `0` (compatibilidad) |
+| Valor vacío | Usa el valor por defecto |
+| `dos`, `1.5`, `-1` | Error de configuración |
+
+## 4.1. Pruebas pendientes de R5
+
+Las pruebas de los flujos nuevos de seguridad se acordaron con otro integrante y
+no se agregaron en esta rama. Faltan:
+
+| Caso | Resultado esperado |
+| --- | --- |
+| Credenciales inválidas en los cuatro escenarios | Mismo `401 INVALID_CREDENTIALS` |
+| Fuerza bruta simulada | Bloqueo a los 5 fallos; sin incremento durante el bloqueo |
+| Reutilización de token de reset | `400 INVALID_RESET_TOKEN` |
+| Sesión expirada (`UPDATE sessions.expires_at`) | `401 INVALID_SESSION` |
+
+Mientras tanto, el comportamiento se verificó manualmente con `curl` y SQL. Los
+comandos y las salidas están en [`evidencia-auth.md`](evidencia-auth.md).
+
 ## 5. Casos de frontend
 
 `frontend/src/components/TaskCard.test.jsx`:
@@ -156,9 +189,12 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  4 archivos, 39 pruebas aprobadas
+Backend:  5 archivos, 41 pruebas aprobadas
 Frontend: 1 archivo, 3 pruebas aprobadas
 ```
+
+Las 41 incluyen 39 pruebas previas y 2 del parser de `TRUST_PROXY`. Las pruebas
+de los flujos nuevos de seguridad (R5) están pendientes por acuerdo del equipo.
 
 ## 7. Integración continua
 
@@ -187,6 +223,8 @@ Si la CI falla, el Pull Request no debe fusionarse.
 | --- | --- | --- |
 | `database "sportreserve_test" does not exist` | No se creó la base | `npm run db:create:test` |
 | `password authentication failed` | `.env` incorrecto | Revisa usuario y contraseña |
-| `ECONNREFUSED 5432` | PostgreSQL detenido | Inicia el servicio |
+| `ECONNREFUSED 5432` | PostgreSQL detenido o puerto incorrecto | Inicia el servicio o usa `POSTGRES_PORT=5433` con Docker |
 | Las pruebas se pisan | Paralelismo | Mantén `fileParallelism: false` |
 | Rate limit en pruebas | Configuración heredada | Asegura `RATE_LIMIT_ENABLED=false` |
+| `password authentication failed` | `.env` distinto al volumen de Docker | Revisa credenciales o recrea el volumen |
+| Correos de reset no aparecen | `NODE_ENV` no es `test` o SMTP mal configurado | En pruebas se usa la bandeja en memoria; en local revisa Mailpit |

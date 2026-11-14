@@ -7,6 +7,11 @@ Todas las respuestas son JSON. Las rutas protegidas usan la cookie de sesión;
 el navegador la envía automáticamente. Para pruebas manuales con `curl` se
 puede guardar con `-c cookies.txt` y reutilizar con `-b cookies.txt`.
 
+La cookie `sr_token` contiene un JWT con `sub` (usuario) y `jti` (sesión). Cada
+petición protegida valida la firma y consulta `sessions`; por eso un logout o un
+cambio de contraseña invalidan la cookie de inmediato, aunque el JWT no haya
+caducado.
+
 ## Formato de respuesta
 
 Recurso individual:
@@ -77,9 +82,12 @@ Reglas:
 
 - `name`: 2–80 caracteres.
 - `email`: válido, máximo 120, se normaliza a minúsculas.
-- `password`: 10–72 caracteres.
+- `password`: mínimo 10 caracteres y máximo 72 bytes en UTF-8.
 - Correo duplicado → `409 EMAIL_IN_USE`.
 - Rol inyectado o campo extra → `400 VALIDATION_ERROR`.
+
+> El registro mantiene `409 EMAIL_IN_USE` por compatibilidad; por tanto, permite
+> saber si un correo ya está registrado. Es un compromiso documentado.
 
 ### `POST /auth/login`
 
@@ -91,22 +99,91 @@ Reglas:
 ```
 
 Respuesta `200` con `{ "data": { ...usuario... } }` y cabecera
-`Set-Cookie: sr_token=...; HttpOnly; SameSite=Strict; Path=/`.
+`Set-Cookie: sr_token=...; HttpOnly; SameSite=Strict; Path=/` (más `Secure` en
+producción).
 
-Credenciales inválidas o usuario inactivo → `401 INVALID_CREDENTIALS` con el
-mensaje genérico “Correo o contraseña incorrectos”.
+Cada login crea una sesión nueva. Si la petición ya traía una sesión válida del
+mismo usuario, la anterior se revoca antes de crear la nueva.
+
+Credenciales inválidas, usuario inactivo o cuenta bloqueada → `401
+INVALID_CREDENTIALS` con el mensaje genérico “Correo o contraseña incorrectos”.
+El tiempo de respuesta se mantiene comparable aunque el correo no exista.
+
+### Bloqueo por cuenta
+
+Tras 5 fallos, la cuenta queda bloqueada 60 segundos. Cada fallo posterior,
+cuando el bloqueo vence, duplica la duración: 120, 240, 480 y 900 segundos como
+máximo. Mientras está bloqueada no se incrementa el contador. Un login correcto
+lo reinicia.
 
 ### `POST /auth/logout`
 
-Elimina la cookie. Respuesta `204` sin cuerpo.
+Revoca la sesión de la cookie y la elimina. Es idempotente: siempre responde
+`204`, aunque falte la cookie o el token sea inválido.
+
+### `POST /auth/change-password`
+
+Requiere sesión. Cuerpo:
+
+```json
+{
+  "currentPassword": "Password123!",
+  "newPassword": "NuevaClave456!"
+}
+```
+
+- `currentPassword` incorrecta → `400 INVALID_CURRENT_PASSWORD`.
+- Nueva igual a la actual → `400 SAME_PASSWORD`.
+- Nueva fuera de 10 caracteres / 72 bytes → `400 VALIDATION_ERROR`.
+- Éxito → `200`, nueva cookie y revocación de **todas** las sesiones anteriores.
+- Aplica el limitador de login (20 fallos por IP cada 15 minutos).
+
+### `POST /auth/forgot-password`
+
+Cuerpo: `{ "email": "ana@ejemplo.com" }`. Responde siempre `202` con el mismo
+cuerpo, exista o no el correo:
+
+```json
+{
+  "data": {
+    "message": "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña"
+  }
+}
+```
+
+Limitador: 5 solicitudes por IP cada 15 minutos. En desarrollo el correo se ve en
+Mailpit (`http://127.0.0.1:8025`); sin SMTP configurado no se envía nada.
+
+### `POST /auth/reset-password`
+
+Cuerpo:
+
+```json
+{
+  "token": "<token del enlace>",
+  "newPassword": "NuevaClave456!"
+}
+```
+
+El enlace recibido tiene la forma `FRONTEND_URL/restablecer#token=<token>`. El
+token es de un solo uso, caduca en `RESET_TOKEN_TTL_MINUTES` (15 por defecto) y
+solo se guarda su SHA-256.
+
+- Token inválido, usado, vencido o de cuenta inactiva →
+  `400 INVALID_RESET_TOKEN`.
+- Éxito → `200`, contraseña actualizada, cuentas desbloqueada y todas las
+  sesiones revocadas. No inicia sesión automáticamente.
 
 ### `GET /auth/me`
 
-Devuelve el usuario de la sesión. Requiere cookie válida.
+Devuelve el usuario de la sesión. Requiere cookie válida y una fila de `sessions`
+no revocada ni vencida.
 
 ```bash
 curl -b cookies.txt http://localhost:3000/api/v1/auth/me
 ```
+
+Una cookie revocada, vencida o sin `jti` responde `401 INVALID_SESSION`.
 
 ## Tareas
 
@@ -221,9 +298,12 @@ Valores permitidos: `estudiante`, `docente`, `administrador`.
 | 400 | `VALIDATION_ERROR` | Datos inválidos o campos extra |
 | 400 | `INVALID_JSON` | JSON malformado |
 | 400 | `CANNOT_DEMOTE_SELF` | Administrador intenta quitarse el rol |
+| 400 | `INVALID_CURRENT_PASSWORD` | La contraseña actual no coincide |
+| 400 | `SAME_PASSWORD` | La nueva contraseña es igual a la actual |
+| 400 | `INVALID_RESET_TOKEN` | Token de restablecimiento inválido, usado o vencido |
 | 401 | `UNAUTHENTICATED` | Falta la cookie |
-| 401 | `INVALID_SESSION` | Token inválido, expirado o usuario inactivo |
-| 401 | `INVALID_CREDENTIALS` | Login incorrecto |
+| 401 | `INVALID_SESSION` | Token inválido, sesión revocada/vencida o usuario inactivo |
+| 401 | `INVALID_CREDENTIALS` | Login incorrecto o cuenta bloqueada |
 | 403 | `FORBIDDEN` | Rol sin permiso |
 | 403 | `CORS_NOT_ALLOWED` | Origen no permitido |
 | 403 | `ORIGIN_NOT_ALLOWED` | `Origin` no permitido en escritura |
