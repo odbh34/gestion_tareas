@@ -90,8 +90,25 @@ async function registerFailedAttempt(id) {
   return rows[0] || null;
 }
 
-async function resetFailedAttempts(id) {
-  await pool.query(
+async function findByIdWithPassword(id) {
+  const { rows } = await pool.query(
+    'SELECT id, password_hash FROM users WHERE id = $1',
+    [id],
+  );
+  return rows[0] || null;
+}
+
+async function updatePassword(id, passwordHash, client = pool) {
+  await client.query(
+    `UPDATE users
+     SET password_hash = $2, updated_at = now()
+     WHERE id = $1`,
+    [id, passwordHash],
+  );
+}
+
+async function resetFailedAttempts(id, client = pool) {
+  await client.query(
     `UPDATE users
      SET failed_attempts = 0, locked_until = NULL, updated_at = now()
      WHERE id = $1`,
@@ -180,8 +197,10 @@ module.exports = {
   findById,
   findByEmail,
   findByEmailWithPassword,
+  findByIdWithPassword,
   registerFailedAttempt,
   resetFailedAttempts,
+  updatePassword,
   createUser,
   listUsers,
   updateRole,

@@ -40,9 +40,17 @@ const loginSchema = z
   })
   .strict();
 
+const changePasswordSchema = z
+  .object({
+    currentPassword: loginPasswordSchema,
+    newPassword: passwordSchema,
+  })
+  .strict();
+
 module.exports = {
   registerSchema,
   loginSchema,
+  changePasswordSchema,
   emailSchema,
   passwordSchema,
   loginPasswordSchema,
