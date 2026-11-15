@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import ErrorBanner from '../components/ErrorBanner';
+import PasswordInput from '../components/PasswordInput';
 
 export default function ChangePasswordPage() {
   const [form, setForm] = useState({
@@ -67,8 +68,7 @@ export default function ChangePasswordPage() {
         <form className="form" onSubmit={handleSubmit}>
           <label>
             Contraseña actual
-            <input
-              type="password"
+            <PasswordInput
               name="currentPassword"
               autoComplete="current-password"
               required
@@ -84,8 +84,7 @@ export default function ChangePasswordPage() {
 
           <label>
             Nueva contraseña
-            <input
-              type="password"
+            <PasswordInput
               name="newPassword"
               autoComplete="new-password"
               minLength={10}
@@ -104,8 +103,7 @@ export default function ChangePasswordPage() {
 
           <label>
             Repetir contraseña nueva
-            <input
-              type="password"
+            <PasswordInput
               name="confirmPassword"
               autoComplete="new-password"
               minLength={10}

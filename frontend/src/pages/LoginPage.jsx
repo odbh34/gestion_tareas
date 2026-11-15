@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ErrorBanner from '../components/ErrorBanner';
+import PasswordInput from '../components/PasswordInput';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -74,8 +75,7 @@ export default function LoginPage() {
 
           <label>
             Contraseña
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               autoComplete="current-password"
               required

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ErrorBanner from '../components/ErrorBanner';
+import PasswordInput from '../components/PasswordInput';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -93,8 +94,7 @@ export default function RegisterPage() {
 
           <label>
             Contraseña
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               autoComplete="new-password"
               minLength={10}

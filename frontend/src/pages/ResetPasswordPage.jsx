@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import ErrorBanner from '../components/ErrorBanner';
+import PasswordInput from '../components/PasswordInput';
 
 export default function ResetPasswordPage() {
   const location = useLocation();
@@ -79,8 +80,7 @@ export default function ResetPasswordPage() {
             <form className="form" onSubmit={handleSubmit}>
               <label>
                 Nueva contraseña
-                <input
-                  type="password"
+                <PasswordInput
                   name="newPassword"
                   autoComplete="new-password"
                   minLength={10}
@@ -100,8 +100,7 @@ export default function ResetPasswordPage() {
 
               <label>
                 Repetir contraseña
-                <input
-                  type="password"
+                <PasswordInput
                   name="confirmPassword"
                   autoComplete="new-password"
                   minLength={10}
