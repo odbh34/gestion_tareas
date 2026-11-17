@@ -108,6 +108,23 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | Título vacío, estado inválido o ID no UUID | `400` |
 | Filtro por estado y paginación | Datos y metadatos correctos |
 
+### `tests/users.test.js` — gestión administrativa de usuarios
+
+| Caso | Resultado esperado |
+| --- | --- |
+| Administrador crea usuario con contraseña y rol | `201`; puede iniciar sesión; sin `password_hash` |
+| Estudiante intenta crear usuarios | `403 FORBIDDEN` |
+| Correo duplicado, rol inválido o campo extra al crear | `409 EMAIL_IN_USE` / `400 VALIDATION_ERROR` |
+| Administrador edita nombre y correo | `200`; sin campos internos; el nuevo correo hace login |
+| Correo duplicado, cuerpo vacío o campo extra al editar | `409` / `400 VALIDATION_ERROR` |
+| Enviar `password` al editar | `400 VALIDATION_ERROR`; la contraseña no cambia |
+| Ruta administrativa de restablecimiento | `404 NOT_FOUND` (no existe) |
+| Estudiante intenta editar usuarios | `403 FORBIDDEN` |
+| Desactivar cuenta | `200`; sesiones revocadas y login `401` |
+| Reactivar cuenta | `200`; vuelve a poder iniciar sesión |
+| Administrador se desactiva a sí mismo | `400 CANNOT_DEACTIVATE_SELF` |
+| Operar sobre usuario inexistente | `404 USER_NOT_FOUND` |
+
 ### `tests/security.test.js` — seguridad
 
 | Caso | Resultado esperado |
@@ -146,27 +163,35 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | Valor vacío | Usa el valor por defecto |
 | `dos`, `1.5`, `-1` | Error de configuración |
 
-## 4.1. Pruebas pendientes de R5
+## 4.1. Pruebas de R5 — flujos nuevos de seguridad
 
-Las pruebas de los flujos nuevos de seguridad se acordaron con otro integrante y
-no se agregaron en esta rama. Faltan:
+`tests/auth-lifecycle.test.js` y `tests/rate-limit-ip.test.js` cubren:
 
 | Caso | Resultado esperado |
 | --- | --- |
 | Credenciales inválidas en los cuatro escenarios | Mismo `401 INVALID_CREDENTIALS` |
 | Fuerza bruta simulada | Bloqueo a los 5 fallos; sin incremento durante el bloqueo |
-| Reutilización de token de reset | `400 INVALID_RESET_TOKEN` |
-| Sesión expirada (`UPDATE sessions.expires_at`) | `401 INVALID_SESSION` |
+| Reutilización, desconocimiento y vencimiento de token de reset | `400 INVALID_RESET_TOKEN` |
+| Sesión expirada (`UPDATE sessions.expires_at` o JWT vencido) | `401 INVALID_SESSION` |
+| Límite de peticiones por IP | `429 RATE_LIMITED` |
 
-Mientras tanto, el comportamiento se verificó manualmente con `curl` y SQL. Los
-comandos y las salidas están en [`evidencia-auth.md`](evidencia-auth.md).
+Las comprobaciones manuales con `curl` y SQL quedan registradas en
+[`evidencia-auth.md`](evidencia-auth.md).
 
 ## 5. Casos de frontend
 
-Las páginas nuevas de contraseña (`/olvide-contrasena`, `/restablecer` y
-`/cambiar-contrasena`) se verificaron con `npm run build` y comprobaciones
-manuales de renderizado. Sus pruebas de componente quedan pendientes junto con
-las de R5.
+Las páginas de contraseña (`/olvide-contrasena`, `/restablecer` y
+`/cambiar-contrasena`) cuentan con pruebas de componente propias además de la
+verificación con `npm run build`.
+
+`frontend/src/pages/AdminUsersPage.test.jsx`:
+
+1. Muestra el listado de usuarios.
+2. Crea usuarios con contraseña temporal y rol.
+3. Edita nombre y correo sin ofrecer cambio de contraseña ni envío de enlaces.
+4. Cambia el rol desde la tabla.
+5. Desactiva y reactiva cuentas sin eliminarlas.
+6. No muestra acciones de restablecimiento ni eliminación.
 
 `frontend/src/components/TaskCard.test.jsx`:
 
@@ -194,12 +219,13 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  5 archivos, 41 pruebas aprobadas
-Frontend: 1 archivo, 3 pruebas aprobadas
+Backend:  8 archivos, 61 pruebas aprobadas
+Frontend: 6 archivos, 20 pruebas aprobadas
 ```
 
-Las 41 incluyen 39 pruebas previas y 2 del parser de `TRUST_PROXY`. Las pruebas
-de los flujos nuevos de seguridad (R5) están pendientes por acuerdo del equipo.
+Incluyen los flujos de seguridad (R5) y la gestión administrativa de usuarios:
+crear, editar nombre y correo, cambiar rol y activar/desactivar, sin cambio de
+contraseña ni envío de enlaces por parte del administrador.
 
 ## 7. Integración continua
 

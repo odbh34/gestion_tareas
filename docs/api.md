@@ -268,6 +268,59 @@ curl -b cookies.txt \
   "http://localhost:3000/api/v1/users?email=ana&page=1&limit=20"
 ```
 
+### `POST /users`
+
+Crea una cuenta con contraseña temporal. Solo administrador.
+
+```json
+{
+  "name": "Ana Pérez",
+  "email": "ana@ejemplo.com",
+  "password": "ClaveTemporal123!",
+  "role": "docente"
+}
+```
+
+- `name`: obligatorio, 2–80 caracteres.
+- `email`: obligatorio, válido y único (se normaliza a minúsculas).
+- `password`: obligatoria, al menos 10 caracteres y hasta 72 bytes UTF-8.
+- `role`: opcional, por defecto `estudiante`; valores permitidos más abajo.
+
+Respuesta `201` con el usuario creado (sin `password_hash`). Correo duplicado →
+`409 EMAIL_IN_USE`.
+
+> La contraseña se define únicamente al crear la cuenta. No hay ninguna ruta
+> administrativa para cambiar la contraseña de otro usuario ni para enviar
+> enlaces de restablecimiento: esas acciones pertenecen solo al flujo propio del
+> usuario (`/auth/change-password` y `/auth/forgot-password`).
+
+### `PATCH /users/:id`
+
+Edita `name` y/o `email` de un usuario. Solo administrador.
+
+```json
+{ "name": "Ana Pérez", "email": "ana@ejemplo.com" }
+```
+
+Se debe enviar al menos uno de los dos campos. Respuesta `200` con el usuario
+actualizado. Correo duplicado → `409 EMAIL_IN_USE`. Cualquier otro campo
+(incluido `password` o `role`) → `400 VALIDATION_ERROR`. Usuario inexistente →
+`404 USER_NOT_FOUND`.
+
+### `PATCH /users/:id/status`
+
+Activa o desactiva una cuenta. Solo administrador.
+
+```json
+{ "is_active": false }
+```
+
+Respuesta `200` con el usuario actualizado. Al desactivar se revocan todas sus
+sesiones; al reactivar vuelve a poder iniciar sesión. No se elimina ningún
+usuario, para conservar sus tareas. Un administrador no puede desactivar su
+propia cuenta → `400 CANNOT_DEACTIVATE_SELF`. Usuario inexistente →
+`404 USER_NOT_FOUND`.
+
 ### `PATCH /users/:id/role`
 
 ```json
@@ -298,6 +351,7 @@ Valores permitidos: `estudiante`, `docente`, `administrador`.
 | 400 | `VALIDATION_ERROR` | Datos inválidos o campos extra |
 | 400 | `INVALID_JSON` | JSON malformado |
 | 400 | `CANNOT_DEMOTE_SELF` | Administrador intenta quitarse el rol |
+| 400 | `CANNOT_DEACTIVATE_SELF` | Administrador intenta desactivar su propia cuenta |
 | 400 | `INVALID_CURRENT_PASSWORD` | La contraseña actual no coincide |
 | 400 | `SAME_PASSWORD` | La nueva contraseña es igual a la actual |
 | 400 | `INVALID_RESET_TOKEN` | Token de restablecimiento inválido, usado o vencido |

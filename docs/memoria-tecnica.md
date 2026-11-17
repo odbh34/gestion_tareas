@@ -73,7 +73,8 @@ personas pueda mantenerla y evolucionarla.
 - Gestión de tareas propias.
 - Lectura global para docentes y administradores.
 - CRUD global para administradores.
-- Administración de roles.
+- Administración de usuarios: crear con contraseña temporal, editar nombre y
+  correo, cambiar roles y activar/desactivar (sin eliminación física).
 - Búsqueda, filtro, orden y paginación.
 - Pruebas automatizadas y CI.
 - Docker Compose opcional.
@@ -129,7 +130,7 @@ la API completa con Supertest sin levantar un servidor externo.
 | `hooks/useAuth.js` | Acceso al contexto de autenticación |
 | `components/ProtectedRoute.jsx` | Protección de rutas por sesión y rol |
 | `pages/TasksPage.jsx` | CRUD, filtros, búsqueda y paginación |
-| `pages/AdminUsersPage.jsx` | Listado de usuarios y cambio de rol |
+| `pages/AdminUsersPage.jsx` | Crear, editar, cambiar rol y activar/desactivar usuarios |
 
 ## 7. Modelo de datos
 
@@ -287,7 +288,11 @@ JavaScript.
 | Crear tarea | Cualquier usuario autenticado; el dueño se toma de la sesión. |
 | Editar/eliminar | Dueño o administrador. Docente no edita tareas ajenas. |
 | Listar usuarios | Solo administrador. |
+| Crear usuarios | Solo administrador; fija una contraseña temporal y un rol. |
+| Editar nombre/correo | Solo administrador; `password` y `role` se rechazan aquí. |
 | Cambiar rol | Solo administrador; no puede degradarse a sí mismo. |
+| Activar/desactivar | Solo administrador; desactivar revoca las sesiones y no elimina la cuenta. No puede desactivarse a sí mismo. |
+| Cambiar contraseña de otro usuario | No disponible para el administrador; solo el propio usuario vía `/auth/change-password` o `/auth/forgot-password`. |
 
 Cuando un usuario no puede ver o modificar una tarea, la API responde `404`
 en lugar de `403` para no revelar la existencia del recurso.
@@ -368,7 +373,10 @@ Resumen:
 | PATCH | `/tasks/:id` | Dueño o administrador |
 | DELETE | `/tasks/:id` | Dueño o administrador |
 | GET | `/users` | Administrador |
+| POST | `/users` | Administrador (contraseña temporal) |
+| PATCH | `/users/:id` | Administrador (nombre y correo) |
 | PATCH | `/users/:id/role` | Administrador |
+| PATCH | `/users/:id/status` | Administrador (activar/desactivar) |
 
 Formato de error uniforme:
 
@@ -384,7 +392,7 @@ Formato de error uniforme:
 
 ## 12. Pruebas
 
-Se implementaron 41 pruebas de backend (5 archivos) y 3 de frontend. Las pruebas
+Se implementaron 61 pruebas de backend (8 archivos) y 20 de frontend. Las pruebas
 de backend se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y
 cubren:
 
@@ -394,15 +402,18 @@ cubren:
 - Cabeceras de seguridad, CORS y manejo de errores.
 - Límite de tamaño de solicitudes.
 - Parseo numérico de `TRUST_PROXY`.
+- Gestión administrativa de usuarios: crear, editar nombre y correo, cambiar
+  rol y activar/desactivar, con verificación de que no existe cambio de
+  contraseña ni envío de enlaces desde administración.
 
-Las pruebas automatizadas de los flujos nuevos (mensaje genérico, fuerza bruta,
-reutilización de token y sesión expirada) quedaron delegadas a otro integrante
-(R5). Su comportamiento se verificó manualmente; el detalle y los comandos están
-en [`evidencia-auth.md`](evidencia-auth.md) y la trazabilidad en
-[`matriz-cumplimiento-1-2.md`](matriz-cumplimiento-1-2.md).
+Los flujos nuevos de seguridad (mensaje genérico, fuerza bruta, reutilización de
+token y sesión expirada, R5) también están cubiertos por pruebas automáticas. El
+detalle manual y los comandos están en [`evidencia-auth.md`](evidencia-auth.md) y
+la trazabilidad en [`matriz-cumplimiento-1-2.md`](matriz-cumplimiento-1-2.md).
 
-El frontend prueba que React renderiza contenido peligroso como texto y que las
-acciones solo aparecen cuando el usuario puede editar.
+El frontend prueba que React renderiza contenido peligroso como texto, que las
+acciones solo aparecen cuando el usuario puede editar y el flujo completo de
+administración de usuarios.
 
 El detalle está en [`pruebas.md`](pruebas.md).
 

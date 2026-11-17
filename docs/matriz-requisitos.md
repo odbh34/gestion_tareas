@@ -14,9 +14,9 @@
 | RF-08 | Título, descripción, estado y dueño | Tabla `tasks` y esquemas Zod | `001_initial.sql`, `tasks.schemas.js` |
 | RF-09 | Rol estudiante | Solo tareas propias | `tests/tasks.test.js` |
 | RF-10 | Rol docente | Lee todas, edita solo las suyas | `tests/tasks.test.js` |
-| RF-11 | Rol administrador | CRUD total y gestión de usuarios | `tests/tasks.test.js`, `tests/security.test.js` |
+| RF-11 | Rol administrador | CRUD total; crear, editar, cambiar rol y activar/desactivar usuarios (sin cambio de contraseña ni envío de enlaces) | `tests/tasks.test.js`, `tests/security.test.js`, `tests/users.test.js` |
 | RF-12 | Interfaz web | React + Vite | `frontend/src/pages` |
-| RF-13 | Pruebas automatizadas | 41 backend + 3 frontend; R5 pendiente | `docs/pruebas.md` |
+| RF-13 | Pruebas automatizadas | 61 backend + 20 frontend | `docs/pruebas.md` |
 | RF-14 | Repositorio Git | `main`, `develop`, `feature/*`, PR | `CONTRIBUTING.md` |
 | RF-15 | Memoria técnica | `docs/memoria-tecnica.md` | Este repositorio |
 | RF-16 | Docker opcional | `compose.yaml` + Dockerfiles | `docs/despliegue.md` |
@@ -85,4 +85,4 @@ Escala: 1 = bajo, 2 = medio, 3 = alto. Prioridad = P × I.
 - [ ] No hay secretos en el repositorio.
 - [ ] Logout y cambio de contraseña invalidan las sesiones.
 - [ ] El bloqueo progresivo y el restablecimiento se verificaron manualmente.
-- [ ] Las pruebas de R5 quedan asignadas y registradas como pendientes.
+- [x] Las pruebas de R5 están implementadas y registradas en `docs/pruebas.md`.

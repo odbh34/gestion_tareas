@@ -18,7 +18,10 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 - CRUD de tareas con título, descripción, estado y dueño.
 - Roles **estudiante**, **docente** y **administrador**.
 - Búsqueda, filtro por estado, ordenamiento y paginación.
-- Administración de usuarios y roles (solo administrador).
+- Administración de usuarios (solo administrador): crear cuentas con contraseña
+  temporal, editar nombre y correo, cambiar roles y activar/desactivar. No se
+  eliminan cuentas: desactivar conserva sus tareas. El administrador no puede
+  cambiar contraseñas de otros usuarios ni enviar enlaces de restablecimiento.
 - Pruebas de API, seguridad (IDOR, SQLi, XSS, RBAC) e interfaz.
 - Docker Compose con PostgreSQL, backend, frontend Nginx y Mailpit.
 - Integración continua con GitHub Actions.
@@ -45,10 +48,12 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 | Ver tareas de todos | No | Sí | Sí |
 | Editar/eliminar sus tareas | Sí | Sí | Sí |
 | Editar/eliminar tareas ajenas | No | No | Sí |
-| Listar usuarios y cambiar roles | No | No | Sí |
+| Crear, editar y desactivar usuarios; cambiar roles | No | No | Sí |
 
 Los registros nuevos siempre se crean con rol `estudiante`. El rol no se acepta
-desde el cuerpo de la solicitud.
+desde el cuerpo de la solicitud. La contraseña solo se fija al crear una cuenta
+(el administrador la define como temporal); desde administración no se puede
+cambiar ni enviar enlaces de restablecimiento.
 
 ## Estructura del repositorio
 
@@ -178,13 +183,13 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 41 pruebas
+npm test                  # 61 pruebas
 npm run test:coverage
 npm run lint
 
 # Frontend
 cd frontend
-npm test                  # 3 pruebas
+npm test                  # 20 pruebas
 npm run lint
 npm run build
 ```

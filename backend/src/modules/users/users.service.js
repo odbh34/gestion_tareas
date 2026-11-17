@@ -173,6 +173,56 @@ async function listUsers({ email, page, limit }) {
   };
 }
 
+async function updateUser(id, { name, email }) {
+  const fields = [];
+  const params = [];
+
+  if (name !== undefined) {
+    params.push(name);
+    fields.push(`name = $${params.length}`);
+  }
+
+  if (email !== undefined) {
+    params.push(email);
+    fields.push(`email = $${params.length}`);
+  }
+
+  if (fields.length === 0) return null;
+
+  params.push(id);
+
+  const { rows } = await pool.query(
+    `WITH updated AS (
+       UPDATE users
+       SET ${fields.join(', ')}, updated_at = now()
+       WHERE id = $${params.length}
+       RETURNING *
+     )
+     SELECT ${PUBLIC_FIELDS}
+     FROM updated u
+     JOIN roles r ON r.id = u.role_id`,
+    params,
+  );
+  return rows[0] || null;
+}
+
+async function updateStatus(id, isActive, client = pool) {
+  const { rows } = await client.query(
+    `WITH updated AS (
+       UPDATE users
+       SET is_active = $2,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING *
+     )
+     SELECT ${PUBLIC_FIELDS}
+     FROM updated u
+     JOIN roles r ON r.id = u.role_id`,
+    [id, isActive],
+  );
+  return rows[0] || null;
+}
+
 async function updateRole(id, role) {
   const { rows } = await pool.query(
     `WITH updated AS (
@@ -203,5 +253,7 @@ module.exports = {
   updatePassword,
   createUser,
   listUsers,
+  updateUser,
+  updateStatus,
   updateRole,
 };

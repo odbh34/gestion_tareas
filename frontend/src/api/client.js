@@ -66,6 +66,14 @@ export const api = {
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
 
   listUsers: (params = {}) => request(withQuery('/users', params)),
+  createUser: (data) => request('/users', { method: 'POST', body: data }),
+  updateUser: (id, data) =>
+    request(`/users/${id}`, { method: 'PATCH', body: data }),
   updateUserRole: (id, role) =>
     request(`/users/${id}/role`, { method: 'PATCH', body: { role } }),
+  updateUserStatus: (id, isActive) =>
+    request(`/users/${id}/status`, {
+      method: 'PATCH',
+      body: { is_active: isActive },
+    }),
 };

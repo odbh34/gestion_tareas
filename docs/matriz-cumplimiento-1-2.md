@@ -15,11 +15,11 @@ variables siguen la convención del repositorio (inglés).
 | R2 | Política de contraseñas (10 caracteres / 72 bytes UTF-8) | Cumplido | `auth.schemas.js`, evidencia manual |
 | R3 | Endurecimiento de login, sesiones y restablecimiento | Cumplido | `auth.service.js`, `sessions.service.js`, `passwordReset.service.js` |
 | R4 | Registro de eventos de autenticación sin datos sensibles | Cumplido | `authEvents.service.js`, `003_auth_security.sql` |
-| R5 | Pruebas automatizadas de los flujos nuevos | **Pendiente (delegado)** | Evidencia manual en `evidencia-auth.md` |
+| R5 | Pruebas automatizadas de los flujos nuevos | Cumplido | `tests/auth-lifecycle.test.js`, `tests/rate-limit-ip.test.js` |
 
-La suite existente queda verde: **41 pruebas de backend** (39 previas + 2 del
-parser de `TRUST_PROXY`) y **3 de frontend**. Las pruebas específicas de R5 se
-acordaron con otro integrante del equipo y no se incluyeron en esta rama.
+La suite queda verde: **61 pruebas de backend** (8 archivos) y **20 de frontend**
+(6 archivos). Las pruebas específicas de R5 se incorporaron después de la
+evidencia manual recogida en `evidencia-auth.md`.
 
 ## 2. R1 — Roles normalizados
 
@@ -179,22 +179,22 @@ Eventos registrados: `register`, `login_success`, `login_failed`,
 Nunca se guardan correos, contraseñas, tokens, enlaces ni cuerpos de solicitud.
 El registro es “best effort”: un fallo al auditar no interrumpe el login.
 
-## 6. R5 — Pruebas (pendiente por acuerdo)
+## 6. R5 — Pruebas automatizadas
 
-La rama deja la suite existente adaptada y verde, pero **no** agrega las
-pruebas automatizadas de los flujos nuevos. Quedan asignadas a otro integrante:
+Los flujos nuevos quedaron cubiertos por `tests/auth-lifecycle.test.js` y
+`tests/rate-limit-ip.test.js`:
 
-| Prueba pendiente | Criterio |
+| Prueba | Criterio |
 | --- | --- |
 | Credenciales inválidas | Mismo `401 INVALID_CREDENTIALS` para correo inexistente, clave mala y usuario inactivo |
 | Fuerza bruta simulada | 5 fallos bloquean; durante el bloqueo no se incrementa; un login correcto reinicia |
 | Reutilización de token | El segundo uso del token de reset devuelve `400 INVALID_RESET_TOKEN` |
 | Sesión expirada | Actualizar `sessions.expires_at` al pasado y comprobar `401 INVALID_SESSION` |
 | Contraseña >72 bytes | Registro, cambio y reset devuelven `400` |
-| `TRUST_PROXY` numérico | Ya cubierto por `tests/config.test.js` |
+| `TRUST_PROXY` numérico | Cubierto por `tests/config.test.js` |
 
-Mientras tanto, la evidencia manual reproducible está en
-[`evidencia-auth.md`](evidencia-auth.md), con comandos `curl` y consultas SQL.
+La evidencia manual reproducible está en [`evidencia-auth.md`](evidencia-auth.md),
+con comandos `curl` y consultas SQL.
 
 ## 7. Configuración y despliegue
 
