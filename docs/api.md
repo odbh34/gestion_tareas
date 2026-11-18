@@ -80,11 +80,20 @@ Respuesta `201`:
 
 Reglas:
 
-- `name`: 2–80 caracteres.
-- `email`: válido, máximo 120, se normaliza a minúsculas.
-- `password`: mínimo 10 caracteres y máximo 72 bytes en UTF-8.
+- `name`: 2–80 caracteres, solo letras (incluye acentos), espacios, guiones,
+  apóstrofos y puntos. Se colapsan los espacios repetidos.
+- `email`: formato estricto, máximo 120, se normaliza a minúsculas. Se rechazan
+  puntos consecutivos, guiones al inicio/final del dominio y TLD no alfabético.
+- `password`: 10 caracteres mínimo, 72 bytes UTF-8 máximo, con mayúscula,
+  minúscula, número y símbolo. No puede ser común, una secuencia simple ni
+  contener el nombre o la parte local del correo.
 - Correo duplicado → `409 EMAIL_IN_USE`.
 - Rol inyectado o campo extra → `400 VALIDATION_ERROR`.
+
+> La validación del correo es solo de **formato**: no comprueba que el dominio
+> exista ni que el usuario sea dueño de la dirección. `texto@texto.text` se
+> acepta. La verificación de propiedad requiere un correo de confirmación y
+> queda como mejora futura.
 
 > El registro mantiene `409 EMAIL_IN_USE` por compatibilidad; por tanto, permite
 > saber si un correo ya está registrado. Es un compromiso documentado.
@@ -281,13 +290,19 @@ Crea una cuenta con contraseña temporal. Solo administrador.
 }
 ```
 
-- `name`: obligatorio, 2–80 caracteres.
-- `email`: obligatorio, válido y único (se normaliza a minúsculas).
-- `password`: obligatoria, al menos 10 caracteres y hasta 72 bytes UTF-8.
+- `name`: obligatorio, 2–80 caracteres; solo letras (incluidos acentos y `ñ`),
+  espacios, apóstrofos y guiones.
+- `email`: obligatorio, con formato válido y TLD real reconocido; se rechazan
+  dominios inventados como `ejemplo@correo.correo`. Se normaliza a minúsculas y
+  debe ser único.
+- `password`: obligatoria, entre 10 caracteres y 72 bytes UTF-8, con al menos
+  una mayúscula, una minúscula, un número y un símbolo. Se exige fortaleza
+  porque es la credencial inicial de la cuenta.
 - `role`: opcional, por defecto `estudiante`; valores permitidos más abajo.
 
 Respuesta `201` con el usuario creado (sin `password_hash`). Correo duplicado →
-`409 EMAIL_IN_USE`.
+`409 EMAIL_IN_USE`. Cualquier campo fuera de estas reglas → `400
+VALIDATION_ERROR` con el detalle por campo.
 
 > La contraseña se define únicamente al crear la cuenta. No hay ninguna ruta
 > administrativa para cambiar la contraseña de otro usuario ni para enviar
@@ -302,9 +317,10 @@ Edita `name` y/o `email` de un usuario. Solo administrador.
 { "name": "Ana Pérez", "email": "ana@ejemplo.com" }
 ```
 
-Se debe enviar al menos uno de los dos campos. Respuesta `200` con el usuario
-actualizado. Correo duplicado → `409 EMAIL_IN_USE`. Cualquier otro campo
-(incluido `password` o `role`) → `400 VALIDATION_ERROR`. Usuario inexistente →
+Se debe enviar al menos uno de los dos campos, con las mismas reglas de formato
+que en `POST /users`. Respuesta `200` con el usuario actualizado. Correo
+duplicado → `409 EMAIL_IN_USE`. Cualquier otro campo (incluido `password` o
+`role`) → `400 VALIDATION_ERROR`. Usuario inexistente →
 `404 USER_NOT_FOUND`.
 
 ### `PATCH /users/:id/status`

@@ -163,6 +163,15 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | Valor vacío | Usa el valor por defecto |
 | `dos`, `1.5`, `-1` | Error de configuración |
 
+### `tests/validation.test.js` — registro robusto
+
+| Caso | Resultado esperado |
+| --- | --- |
+| Nombre con etiquetas o dígitos | `400 VALIDATION_ERROR` |
+| Correo con puntos consecutivos | `400 VALIDATION_ERROR` |
+| Contraseña común o con datos personales | `400 VALIDATION_ERROR` |
+| `texto@texto.text` | `201` (solo se valida el formato) |
+
 ## 4.1. Pruebas de R5 — flujos nuevos de seguridad
 
 `tests/auth-lifecycle.test.js` y `tests/rate-limit-ip.test.js` cubren:
@@ -219,13 +228,16 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  8 archivos, 61 pruebas aprobadas
-Frontend: 6 archivos, 20 pruebas aprobadas
+Backend:  9 archivos, 66 pruebas aprobadas
+Frontend: 7 archivos, 26 pruebas aprobadas
 ```
 
-Incluyen los flujos de seguridad (R5) y la gestión administrativa de usuarios:
-crear, editar nombre y correo, cambiar rol y activar/desactivar, sin cambio de
-contraseña ni envío de enlaces por parte del administrador.
+Incluyen los flujos de seguridad (R5), las validaciones estrictas del registro y
+la gestión administrativa de usuarios: crear, editar nombre y correo, cambiar
+rol y activar/desactivar, sin cambio de contraseña ni envío de enlaces por parte
+del administrador. También cubren el rechazo de nombres con caracteres no
+permitidos, dominios inexistentes y contraseñas temporales sin la fortaleza
+exigida.
 
 ## 7. Integración continua
 

@@ -6,7 +6,8 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 
 ## Funcionalidades
 
-- Registro e inicio de sesión con contraseñas cifradas (bcrypt).
+- Registro con validación estricta de nombre, formato de correo y fortaleza de
+  contraseña, e inicio de sesión con contraseñas cifradas (bcrypt).
 - Sesiones por dispositivo en base de datos, con JWT en cookie `HttpOnly`,
   `SameSite=Strict` y revocación inmediata.
 - Bloqueo progresivo de la cuenta tras intentos fallidos y límite de intentos
@@ -183,13 +184,13 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 61 pruebas
+npm test                  # 66 pruebas
 npm run test:coverage
 npm run lint
 
 # Frontend
 cd frontend
-npm test                  # 20 pruebas
+npm test                  # 26 pruebas
 npm run lint
 npm run build
 ```
@@ -207,7 +208,9 @@ quedaron delegadas a otro integrante. La evidencia manual reproducible está en
 ## Seguridad implementada
 
 - Contraseñas con bcrypt (12 rondas por defecto) y política de 10 caracteres /
-  72 bytes UTF-8.
+  72 bytes UTF-8. En el alta administrativa se exige además mayúscula,
+  minúscula, número y símbolo; el nombre admite solo letras, espacios,
+  apóstrofos y guiones, y el correo debe tener un TLD real.
 - JWT firmado con HS256, emisor y audiencia verificados; el claim `jti`
   identifica una sesión revocable.
 - Cookie `HttpOnly`, `SameSite=Strict` y `Secure` configurable.

@@ -220,6 +220,29 @@
   font-weight: 400;
 }
 
+.field-error {
+  color: #b91c1c;
+}
+
+.password-checks {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.password-checks li.ok {
+  color: #047857;
+}
+
+.form input[aria-invalid='true'] {
+  border-color: #f87171;
+}
+
 input,
 select,
 textarea {
