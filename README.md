@@ -184,13 +184,13 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 66 pruebas
+npm test                  # 69 pruebas
 npm run test:coverage
 npm run lint
 
 # Frontend
 cd frontend
-npm test                  # 26 pruebas
+npm test                  # 30 pruebas
 npm run lint
 npm run build
 ```

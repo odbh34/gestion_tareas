@@ -17,7 +17,7 @@ variables siguen la convención del repositorio (inglés).
 | R4 | Registro de eventos de autenticación sin datos sensibles | Cumplido | `authEvents.service.js`, `003_auth_security.sql` |
 | R5 | Pruebas automatizadas de los flujos nuevos | Cumplido | `tests/auth-lifecycle.test.js`, `tests/rate-limit-ip.test.js` |
 
-La suite queda verde: **66 pruebas de backend** (9 archivos) y **26 de frontend**
+La suite queda verde: **69 pruebas de backend** (9 archivos) y **30 de frontend**
 (7 archivos). Incluye las pruebas específicas de R5 incorporadas después de la
 evidencia manual recogida en `evidencia-auth.md` y las validaciones estrictas
 del registro añadidas en `login_robusto`.

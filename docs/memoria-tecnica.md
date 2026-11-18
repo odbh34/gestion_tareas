@@ -399,7 +399,7 @@ Formato de error uniforme:
 
 ## 12. Pruebas
 
-Se implementaron 66 pruebas de backend (9 archivos) y 26 de frontend (7 archivos). Las pruebas
+Se implementaron 69 pruebas de backend (9 archivos) y 30 de frontend (7 archivos). Las pruebas
 de backend se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y
 cubren:
 

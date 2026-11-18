@@ -4,6 +4,10 @@ import { useAuth } from '../hooks/useAuth';
 import ErrorBanner from '../components/ErrorBanner';
 import Loading from '../components/Loading';
 import PasswordInput from '../components/PasswordInput';
+import {
+  PASSWORD_RULES,
+  validateUserFields,
+} from '../utils/userFormValidation';
 
 const ROLE_OPTIONS = [
   { value: 'estudiante', label: 'Estudiante' },
@@ -23,6 +27,16 @@ const EMPTY_EDIT_FORM = {
   email: '',
 };
 
+function FieldError({ id, message }) {
+  if (!message) return null;
+
+  return (
+    <small id={id} className="field-error" role="alert">
+      {message}
+    </small>
+  );
+}
+
 export default function AdminUsersPage() {
   const { user: currentUser, refresh } = useAuth();
   const [users, setUsers] = useState([]);
@@ -37,6 +51,11 @@ export default function AdminUsersPage() {
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showCreateErrors, setShowCreateErrors] = useState(false);
+  const [showEditErrors, setShowEditErrors] = useState(false);
+
+  const createErrors = validateUserFields(createForm);
+  const editErrors = validateUserFields(editForm);
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +97,9 @@ export default function AdminUsersPage() {
 
   async function handleCreate(event) {
     event.preventDefault();
+    setShowCreateErrors(true);
+    if (Object.keys(createErrors).length > 0) return;
+
     setSaving(true);
     setError('');
     setSuccess('');
@@ -89,6 +111,7 @@ export default function AdminUsersPage() {
         current ? { ...current, total: current.total + 1 } : current,
       );
       setCreateForm(EMPTY_CREATE_FORM);
+      setShowCreateErrors(false);
       setSuccess(`Usuario ${response.data.email} creado correctamente.`);
     } catch (requestError) {
       setError(requestError.message);
@@ -100,6 +123,7 @@ export default function AdminUsersPage() {
   function startEditing(user) {
     setEditingUser(user);
     setEditForm({ name: user.name, email: user.email });
+    setShowEditErrors(false);
     setError('');
     setSuccess('');
   }
@@ -107,11 +131,15 @@ export default function AdminUsersPage() {
   function cancelEditing() {
     setEditingUser(null);
     setEditForm(EMPTY_EDIT_FORM);
+    setShowEditErrors(false);
   }
 
   async function handleEdit(event) {
     event.preventDefault();
     if (!editingUser) return;
+
+    setShowEditErrors(true);
+    if (Object.keys(editErrors).length > 0) return;
 
     setSaving(true);
     setError('');
@@ -127,6 +155,7 @@ export default function AdminUsersPage() {
 
       setEditingUser(null);
       setEditForm(EMPTY_EDIT_FORM);
+      setShowEditErrors(false);
       setSuccess(`Usuario ${response.data.email} actualizado correctamente.`);
     } catch (requestError) {
       setError(requestError.message);
@@ -209,16 +238,23 @@ export default function AdminUsersPage() {
           </div>
 
           {editingUser ? (
-            <form className="form" onSubmit={handleEdit}>
-              <label>
-                Nombre completo
+            <form className="form" onSubmit={handleEdit} noValidate>
+              <div className="field">
+                <label htmlFor="edit-name">Nombre completo</label>
                 <input
+                  id="edit-name"
                   name="name"
                   autoComplete="name"
                   required
                   minLength={2}
                   maxLength={80}
                   value={editForm.name}
+                  aria-invalid={Boolean(showEditErrors && editErrors.name)}
+                  aria-describedby={
+                    showEditErrors && editErrors.name
+                      ? 'edit-name-error'
+                      : undefined
+                  }
                   onChange={(event) =>
                     setEditForm((current) => ({
                       ...current,
@@ -226,17 +262,28 @@ export default function AdminUsersPage() {
                     }))
                   }
                 />
-              </label>
+                <FieldError
+                  id="edit-name-error"
+                  message={showEditErrors ? editErrors.name : ''}
+                />
+              </div>
 
-              <label>
-                Correo electrónico
+              <div className="field">
+                <label htmlFor="edit-email">Correo electrónico</label>
                 <input
+                  id="edit-email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   required
                   maxLength={120}
                   value={editForm.email}
+                  aria-invalid={Boolean(showEditErrors && editErrors.email)}
+                  aria-describedby={
+                    showEditErrors && editErrors.email
+                      ? 'edit-email-error'
+                      : undefined
+                  }
                   onChange={(event) =>
                     setEditForm((current) => ({
                       ...current,
@@ -244,7 +291,11 @@ export default function AdminUsersPage() {
                     }))
                   }
                 />
-              </label>
+                <FieldError
+                  id="edit-email-error"
+                  message={showEditErrors ? editErrors.email : ''}
+                />
+              </div>
 
               <p className="muted">
                 El rol se cambia desde la tabla. Para volver a crear una cuenta,
@@ -270,16 +321,23 @@ export default function AdminUsersPage() {
               </div>
             </form>
           ) : (
-            <form className="form" onSubmit={handleCreate}>
-              <label>
-                Nombre completo
+            <form className="form" onSubmit={handleCreate} noValidate>
+              <div className="field">
+                <label htmlFor="create-name">Nombre completo</label>
                 <input
+                  id="create-name"
                   name="name"
                   autoComplete="name"
                   required
                   minLength={2}
                   maxLength={80}
                   value={createForm.name}
+                  aria-invalid={Boolean(showCreateErrors && createErrors.name)}
+                  aria-describedby={
+                    showCreateErrors && createErrors.name
+                      ? 'create-name-error'
+                      : undefined
+                  }
                   onChange={(event) =>
                     setCreateForm((current) => ({
                       ...current,
@@ -287,17 +345,28 @@ export default function AdminUsersPage() {
                     }))
                   }
                 />
-              </label>
+                <FieldError
+                  id="create-name-error"
+                  message={showCreateErrors ? createErrors.name : ''}
+                />
+              </div>
 
-              <label>
-                Correo electrónico
+              <div className="field">
+                <label htmlFor="create-email">Correo electrónico</label>
                 <input
+                  id="create-email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   required
                   maxLength={120}
                   value={createForm.email}
+                  aria-invalid={Boolean(showCreateErrors && createErrors.email)}
+                  aria-describedby={
+                    showCreateErrors && createErrors.email
+                      ? 'create-email-error'
+                      : undefined
+                  }
                   onChange={(event) =>
                     setCreateForm((current) => ({
                       ...current,
@@ -305,17 +374,26 @@ export default function AdminUsersPage() {
                     }))
                   }
                 />
-              </label>
+                <FieldError
+                  id="create-email-error"
+                  message={showCreateErrors ? createErrors.email : ''}
+                />
+              </div>
 
-              <label>
-                Contraseña temporal
+              <div className="field">
+                <label htmlFor="create-password">Contraseña temporal</label>
                 <PasswordInput
+                  id="create-password"
                   name="password"
                   autoComplete="new-password"
                   required
                   minLength={10}
                   maxLength={72}
                   value={createForm.password}
+                  aria-invalid={Boolean(
+                    showCreateErrors && createErrors.password,
+                  )}
+                  aria-describedby="create-password-rules"
                   onChange={(event) =>
                     setCreateForm((current) => ({
                       ...current,
@@ -323,12 +401,34 @@ export default function AdminUsersPage() {
                     }))
                   }
                 />
-                <small>Entre 10 caracteres y 72 bytes UTF-8.</small>
-              </label>
+                <ul
+                  id="create-password-rules"
+                  className="password-rules"
+                  aria-label="Requisitos de la contraseña"
+                >
+                  {PASSWORD_RULES.map((rule) => {
+                    const met = rule.test(createForm.password);
+                    return (
+                      <li
+                        key={rule.id}
+                        className={met ? 'rule-met' : 'rule-pending'}
+                      >
+                        <span aria-hidden="true">{met ? '✓' : '○'}</span>{' '}
+                        {rule.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <FieldError
+                  id="create-password-error"
+                  message={showCreateErrors ? createErrors.password : ''}
+                />
+              </div>
 
-              <label>
-                Rol
+              <div className="field">
+                <label htmlFor="create-role">Rol</label>
                 <select
+                  id="create-role"
                   name="role"
                   value={createForm.role}
                   onChange={(event) =>
@@ -344,7 +444,7 @@ export default function AdminUsersPage() {
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
               <button
                 type="submit"

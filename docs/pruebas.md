@@ -228,8 +228,8 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  9 archivos, 66 pruebas aprobadas
-Frontend: 7 archivos, 26 pruebas aprobadas
+Backend:  9 archivos, 69 pruebas aprobadas
+Frontend: 7 archivos, 30 pruebas aprobadas
 ```
 
 Incluyen los flujos de seguridad (R5), las validaciones estrictas del registro y
