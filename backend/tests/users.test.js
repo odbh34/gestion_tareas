@@ -110,6 +110,61 @@ describe('Gestión administrativa de usuarios', () => {
     expect(extraField.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('rechaza nombres con caracteres extraños, dominios inventados y contraseñas débiles', async () => {
+    const validUser = {
+      name: 'Usuario Seguro',
+      email: 'seguro@example.com',
+      password: 'Password123!',
+    };
+
+    const invalidName = await request(app)
+      .post('/api/v1/users')
+      .set('Cookie', adminCookie)
+      .send({ ...validUser, name: 'Usuario_123' });
+    expect(invalidName.status).toBe(400);
+    expect(invalidName.body.error.code).toBe('VALIDATION_ERROR');
+    expect(invalidName.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'name' })]),
+    );
+
+    const invalidEmail = await request(app)
+      .post('/api/v1/users')
+      .set('Cookie', adminCookie)
+      .send({ ...validUser, email: 'ejemplo@correo.correo' });
+    expect(invalidEmail.status).toBe(400);
+    expect(invalidEmail.body.error.code).toBe('VALIDATION_ERROR');
+    expect(invalidEmail.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'email' })]),
+    );
+
+    const weakPassword = await request(app)
+      .post('/api/v1/users')
+      .set('Cookie', adminCookie)
+      .send({ ...validUser, password: 'contrasenalarga' });
+    expect(weakPassword.status).toBe(400);
+    expect(weakPassword.body.error.code).toBe('VALIDATION_ERROR');
+    expect(weakPassword.body.error.details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'password' })]),
+    );
+  });
+
+  it('acepta nombres con acentos y apóstrofos y dominios reales', async () => {
+    const response = await request(app)
+      .post('/api/v1/users')
+      .set('Cookie', adminCookie)
+      .send({
+        name: "María O'Brien",
+        email: 'maria@empresa.es',
+        password: 'ClaveTemporal123!',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toMatchObject({
+      name: "María O'Brien",
+      email: 'maria@empresa.es',
+    });
+  });
+
   it('permite actualizar nombre y correo sin exponer campos internos', async () => {
     const response = await request(app)
       .patch(`/api/v1/users/${student.id}`)
@@ -155,6 +210,22 @@ describe('Gestión administrativa de usuarios', () => {
       .send({ name: 'Nombre', role: 'administrador' });
     expect(extra.status).toBe(400);
     expect(extra.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rechaza nombres y correos inválidos al editar un usuario', async () => {
+    const invalidName = await request(app)
+      .patch(`/api/v1/users/${student.id}`)
+      .set('Cookie', adminCookie)
+      .send({ name: 'Usuario_123' });
+    expect(invalidName.status).toBe(400);
+    expect(invalidName.body.error.code).toBe('VALIDATION_ERROR');
+
+    const invalidEmail = await request(app)
+      .patch(`/api/v1/users/${student.id}`)
+      .set('Cookie', adminCookie)
+      .send({ email: 'usuario@dominio.falso' });
+    expect(invalidEmail.status).toBe(400);
+    expect(invalidEmail.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('no permite cambiar la contraseña de un usuario desde la edición administrativa', async () => {

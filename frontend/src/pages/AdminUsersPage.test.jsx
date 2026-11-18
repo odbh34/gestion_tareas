@@ -1,6 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../api/client';
+import {
+  EMAIL_ERROR,
+  NAME_ERROR,
+  PASSWORD_ERROR,
+} from '../utils/userFormValidation';
 import AdminUsersPage from './AdminUsersPage';
 
 const refresh = vi.fn();
@@ -58,6 +63,19 @@ function setup() {
   render(<AdminUsersPage />);
 }
 
+function fillCreateForm({ name, email, password, role }) {
+  fireEvent.change(screen.getByLabelText('Nombre completo'), {
+    target: { value: name },
+  });
+  fireEvent.change(screen.getByLabelText('Correo electrónico'), {
+    target: { value: email },
+  });
+  fireEvent.change(screen.getByLabelText(/Contraseña temporal/), {
+    target: { value: password },
+  });
+  fireEvent.change(screen.getByLabelText('Rol'), { target: { value: role } });
+}
+
 describe('AdminUsersPage', () => {
   it('muestra el listado de usuarios', async () => {
     setup();
@@ -106,6 +124,94 @@ describe('AdminUsersPage', () => {
       await screen.findByText('Usuario docente@demo.com creado correctamente.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Docente Nuevo')).toBeInTheDocument();
+  });
+
+  it('rechaza nombre, correo y contraseña inválidos antes de llamar a la API', async () => {
+    setup();
+    await screen.findByText('Estudiante Uno');
+
+    fillCreateForm({
+      name: 'Usuario_123<script>',
+      email: 'ejemplo@correo.correo',
+      password: 'contrasenalarga',
+      role: 'estudiante',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Crear usuario' }));
+
+    expect(await screen.findByText(NAME_ERROR)).toBeInTheDocument();
+    expect(screen.getByText(EMAIL_ERROR)).toBeInTheDocument();
+    expect(screen.getByText(PASSWORD_ERROR)).toBeInTheDocument();
+    expect(api.createUser).not.toHaveBeenCalled();
+  });
+
+  it('muestra los requisitos de la contraseña y los marca al cumplirlos', async () => {
+    setup();
+    await screen.findByText('Estudiante Uno');
+
+    const rules = screen.getByRole('list', {
+      name: 'Requisitos de la contraseña',
+    });
+    expect(rules.querySelectorAll('.rule-pending')).toHaveLength(5);
+
+    fireEvent.change(screen.getByLabelText(/Contraseña temporal/), {
+      target: { value: 'ClaveTemporal123!' },
+    });
+    expect(rules.querySelectorAll('.rule-met')).toHaveLength(5);
+  });
+
+  it('acepta nombres con acentos y apóstrofos y dominios reales', async () => {
+    const createdUser = {
+      id: 'new-id',
+      name: "María O'Brien",
+      email: 'maria@empresa.es',
+      role: 'estudiante',
+      is_active: true,
+    };
+    api.createUser.mockResolvedValue({ data: createdUser });
+
+    setup();
+    await screen.findByText('Estudiante Uno');
+
+    fillCreateForm({
+      name: "María O'Brien",
+      email: 'maria@empresa.es',
+      password: 'ClaveTemporal123!',
+      role: 'estudiante',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Crear usuario' }));
+
+    await waitFor(() => {
+      expect(api.createUser).toHaveBeenCalledWith({
+        name: "María O'Brien",
+        email: 'maria@empresa.es',
+        password: 'ClaveTemporal123!',
+        role: 'estudiante',
+      });
+    });
+  });
+
+  it('rechaza cambios con nombre o correo inválidos al editar', async () => {
+    setup();
+    await screen.findByText('Estudiante Uno');
+
+    const row = screen.getByText('Estudiante Uno').closest('tr');
+    fireEvent.click(
+      Array.from(row.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Editar',
+      ),
+    );
+
+    fireEvent.change(screen.getByLabelText('Nombre completo'), {
+      target: { value: 'Usuario_123' },
+    });
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), {
+      target: { value: 'usuario@dominio.falso' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
+
+    expect(await screen.findByText(NAME_ERROR)).toBeInTheDocument();
+    expect(screen.getByText(EMAIL_ERROR)).toBeInTheDocument();
+    expect(api.updateUser).not.toHaveBeenCalled();
   });
 
   it('edita nombre y correo sin ofrecer cambio de contraseña', async () => {

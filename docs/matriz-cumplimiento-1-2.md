@@ -12,12 +12,12 @@ variables siguen la convención del repositorio (inglés).
 | ID | Requisito | Estado | Evidencia principal |
 | --- | --- | --- | --- |
 | R1 | Roles normalizados en base de datos | Cumplido | `002_roles.sql`, `users.service.js`, `tests/auth.test.js` |
-| R2 | Política de contraseñas (10 caracteres / 72 bytes UTF-8) | Cumplido | `auth.schemas.js`, evidencia manual |
+| R2 | Política de contraseñas (10 caracteres / 72 bytes UTF-8; mayúscula, minúscula, número y símbolo en el alta admin) | Cumplido | `auth.schemas.js`, `users.schemas.js`, `tests/users.test.js` |
 | R3 | Endurecimiento de login, sesiones y restablecimiento | Cumplido | `auth.service.js`, `sessions.service.js`, `passwordReset.service.js` |
 | R4 | Registro de eventos de autenticación sin datos sensibles | Cumplido | `authEvents.service.js`, `003_auth_security.sql` |
 | R5 | Pruebas automatizadas de los flujos nuevos | Cumplido | `tests/auth-lifecycle.test.js`, `tests/rate-limit-ip.test.js` |
 
-La suite queda verde: **61 pruebas de backend** (8 archivos) y **20 de frontend**
+La suite queda verde: **64 pruebas de backend** (8 archivos) y **24 de frontend**
 (6 archivos). Las pruebas específicas de R5 se incorporaron después de la
 evidencia manual recogida en `evidencia-auth.md`.
 

@@ -16,7 +16,7 @@ function utf8Password(minCharacters) {
     if (Buffer.byteLength(value, 'utf8') > 72) {
       ctx.addIssue({
         code: 'custom',
-        message: 'La contraseña no puede superar los 72 bytes en UTF-8',
+        message: 'La contraseña es demasiado larga',
       });
     }
   });

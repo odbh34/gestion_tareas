@@ -219,13 +219,15 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  8 archivos, 61 pruebas aprobadas
-Frontend: 6 archivos, 20 pruebas aprobadas
+Backend:  8 archivos, 64 pruebas aprobadas
+Frontend: 6 archivos, 24 pruebas aprobadas
 ```
 
 Incluyen los flujos de seguridad (R5) y la gestión administrativa de usuarios:
 crear, editar nombre y correo, cambiar rol y activar/desactivar, sin cambio de
-contraseña ni envío de enlaces por parte del administrador.
+contraseña ni envío de enlaces por parte del administrador. También cubren el
+rechazo de nombres con caracteres no permitidos, dominios inexistentes y
+contraseñas temporales sin la fortaleza exigida.
 
 ## 7. Integración continua
 

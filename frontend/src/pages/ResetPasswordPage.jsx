@@ -95,7 +95,7 @@ export default function ResetPasswordPage() {
                   }
                   placeholder="Mínimo 10 caracteres"
                 />
-                <small>Entre 10 caracteres y 72 bytes UTF-8.</small>
+                <small>Entre 10 y 72 caracteres.</small>
               </label>
 
               <label>

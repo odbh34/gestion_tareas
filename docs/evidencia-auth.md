@@ -168,6 +168,10 @@ Mensaje del límite de bytes:
 }
 ```
 
+> Nota: el texto de este mensaje se simplificó después en `auth.schemas.js` a
+> «La contraseña es demasiado larga», para que la interfaz muestre un mensaje
+> comprensible para el usuario.
+
 ## 7. Restablecimiento por correo
 
 Solicitud para `reset@example.com`:
