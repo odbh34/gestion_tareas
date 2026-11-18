@@ -80,11 +80,20 @@ Respuesta `201`:
 
 Reglas:
 
-- `name`: 2–80 caracteres.
-- `email`: válido, máximo 120, se normaliza a minúsculas.
-- `password`: mínimo 10 caracteres y máximo 72 bytes en UTF-8.
+- `name`: 2–80 caracteres, solo letras (incluye acentos), espacios, guiones,
+  apóstrofos y puntos. Se colapsan los espacios repetidos.
+- `email`: formato estricto, máximo 120, se normaliza a minúsculas. Se rechazan
+  puntos consecutivos, guiones al inicio/final del dominio y TLD no alfabético.
+- `password`: 10 caracteres mínimo, 72 bytes UTF-8 máximo, con mayúscula,
+  minúscula, número y símbolo. No puede ser común, una secuencia simple ni
+  contener el nombre o la parte local del correo.
 - Correo duplicado → `409 EMAIL_IN_USE`.
 - Rol inyectado o campo extra → `400 VALIDATION_ERROR`.
+
+> La validación del correo es solo de **formato**: no comprueba que el dominio
+> exista ni que el usuario sea dueño de la dirección. `texto@texto.text` se
+> acepta. La verificación de propiedad requiere un correo de confirmación y
+> queda como mejora futura.
 
 > El registro mantiene `409 EMAIL_IN_USE` por compatibilidad; por tanto, permite
 > saber si un correo ya está registrado. Es un compromiso documentado.

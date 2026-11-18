@@ -223,11 +223,18 @@ automáticamente al iniciar el contenedor del backend.
 ### Registro
 
 1. El usuario se registra con nombre, correo y contraseña.
-2. El servidor normaliza el correo y verifica que no exista.
-3. La contraseña se valida (mínimo 10 caracteres, máximo 72 bytes UTF-8) y se
-   cifra con bcrypt (12 rondas por defecto).
+2. El servidor normaliza el nombre (espacios) y el correo (minúsculas), valida
+   sus formatos con Zod y verifica que el correo no exista.
+3. La contraseña se valida: 10 caracteres mínimo, 72 bytes UTF-8 máximo,
+   mayúscula, minúscula, número y símbolo; se rechazan contraseñas comunes,
+   secuencias simples y contraseñas que incluyan el nombre o el correo. Después
+   se cifra con bcrypt (12 rondas por defecto).
 4. El registro siempre asigna el rol `estudiante` mediante `role_id`.
 5. Se registra el evento `register` con la IP, sin correo.
+
+La validación del correo es solo de formato. No se comprueba la existencia del
+dominio ni la propiedad de la dirección; eso exigiría un correo de confirmación
+con token y queda fuera del alcance actual.
 
 ### Login y bloqueo
 
@@ -384,7 +391,7 @@ Formato de error uniforme:
 
 ## 12. Pruebas
 
-Se implementaron 41 pruebas de backend (5 archivos) y 3 de frontend. Las pruebas
+Se implementaron 55 pruebas de backend (8 archivos) y 20 de frontend (6 archivos). Las pruebas
 de backend se ejecutan contra una base PostgreSQL real (`sportreserve_test`) y
 cubren:
 

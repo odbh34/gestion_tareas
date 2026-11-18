@@ -3,6 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ErrorBanner from '../components/ErrorBanner';
 import PasswordInput from '../components/PasswordInput';
+import {
+  normalizeEmail,
+  normalizeName,
+  passwordChecks,
+  validateEmail,
+  validateName,
+  validatePassword,
+} from '../utils/validation';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -12,16 +20,35 @@ export default function RegisterPage() {
     email: '',
     password: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  function changeField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: '' }));
+    setError('');
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+
+    const name = normalizeName(form.name);
+    const email = normalizeEmail(form.email);
+    const errors = {
+      name: validateName(name),
+      email: validateEmail(email),
+      password: validatePassword(form.password, { name, email }),
+    };
+
+    setFieldErrors(errors);
+    if (Object.values(errors).some(Boolean)) return;
+
     setSubmitting(true);
 
     try {
-      await register(form);
+      await register({ name, email, password: form.password });
       navigate('/login', {
         replace: true,
         state: { message: 'Cuenta creada. Ya puedes iniciar sesión.' },
@@ -32,6 +59,11 @@ export default function RegisterPage() {
       setSubmitting(false);
     }
   }
+
+  const checks = passwordChecks(form.password, {
+    name: form.name,
+    email: form.email,
+  });
 
   return (
     <div className="auth-page">
@@ -53,7 +85,7 @@ export default function RegisterPage() {
 
         <ErrorBanner message={error} />
 
-        <form className="form" onSubmit={handleSubmit}>
+        <form className="form" onSubmit={handleSubmit} noValidate>
           <label>
             Nombre completo
             <input
@@ -64,14 +96,16 @@ export default function RegisterPage() {
               maxLength={80}
               required
               value={form.name}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
+              onChange={(event) => changeField('name', event.target.value)}
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? 'name-error' : undefined}
               placeholder="Ana Pérez"
             />
+            {fieldErrors.name && (
+              <small id="name-error" className="field-error" role="alert">
+                {fieldErrors.name}
+              </small>
+            )}
           </label>
 
           <label>
@@ -82,14 +116,16 @@ export default function RegisterPage() {
               autoComplete="email"
               required
               value={form.email}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
+              onChange={(event) => changeField('email', event.target.value)}
+              aria-invalid={Boolean(fieldErrors.email)}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
               placeholder="ana@ejemplo.com"
             />
+            {fieldErrors.email && (
+              <small id="email-error" className="field-error" role="alert">
+                {fieldErrors.email}
+              </small>
+            )}
           </label>
 
           <label>
@@ -101,15 +137,25 @@ export default function RegisterPage() {
               maxLength={72}
               required
               value={form.password}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
+              onChange={(event) => changeField('password', event.target.value)}
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={
+                fieldErrors.password ? 'password-error' : 'password-checks'
               }
               placeholder="Mínimo 10 caracteres"
             />
-            <small>Usa entre 10 y 72 caracteres.</small>
+            {fieldErrors.password && (
+              <small id="password-error" className="field-error" role="alert">
+                {fieldErrors.password}
+              </small>
+            )}
+            <ul id="password-checks" className="password-checks">
+              {checks.map((check) => (
+                <li key={check.label} className={check.ok ? 'ok' : undefined}>
+                  {check.ok ? '✓' : '○'} {check.label}
+                </li>
+              ))}
+            </ul>
           </label>
 
           <button

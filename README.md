@@ -6,7 +6,8 @@ aplicación también funciona con Node.js y PostgreSQL instalados localmente.
 
 ## Funcionalidades
 
-- Registro e inicio de sesión con contraseñas cifradas (bcrypt).
+- Registro con validación estricta de nombre, formato de correo y fortaleza de
+  contraseña, e inicio de sesión con contraseñas cifradas (bcrypt).
 - Sesiones por dispositivo en base de datos, con JWT en cookie `HttpOnly`,
   `SameSite=Strict` y revocación inmediata.
 - Bloqueo progresivo de la cuenta tras intentos fallidos y límite de intentos
@@ -178,7 +179,7 @@ mediante `SEED_*_PASSWORD` antes de sembrar una base compartida.
 ```bash
 # Backend
 cd backend
-npm test                  # 41 pruebas
+npm test                  # 55 pruebas
 npm run test:coverage
 npm run lint
 

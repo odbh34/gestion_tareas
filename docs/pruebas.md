@@ -146,6 +146,15 @@ No requiere backend: las pruebas de componentes usan datos locales.
 | Valor vacío | Usa el valor por defecto |
 | `dos`, `1.5`, `-1` | Error de configuración |
 
+### `tests/validation.test.js` — registro robusto
+
+| Caso | Resultado esperado |
+| --- | --- |
+| Nombre con etiquetas o dígitos | `400 VALIDATION_ERROR` |
+| Correo con puntos consecutivos | `400 VALIDATION_ERROR` |
+| Contraseña común o con datos personales | `400 VALIDATION_ERROR` |
+| `texto@texto.text` | `201` (solo se valida el formato) |
+
 ## 4.1. Pruebas pendientes de R5
 
 Las pruebas de los flujos nuevos de seguridad se acordaron con otro integrante y
@@ -194,8 +203,8 @@ npm run build
 Resultado esperado de la versión actual:
 
 ```text
-Backend:  5 archivos, 41 pruebas aprobadas
-Frontend: 1 archivo, 3 pruebas aprobadas
+Backend:  8 archivos, 55 pruebas aprobadas
+Frontend: 6 archivos, 20 pruebas aprobadas
 ```
 
 Las 41 incluyen 39 pruebas previas y 2 del parser de `TRUST_PROXY`. Las pruebas

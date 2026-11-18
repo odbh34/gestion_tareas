@@ -17,9 +17,8 @@ variables siguen la convención del repositorio (inglés).
 | R4 | Registro de eventos de autenticación sin datos sensibles | Cumplido | `authEvents.service.js`, `003_auth_security.sql` |
 | R5 | Pruebas automatizadas de los flujos nuevos | **Pendiente (delegado)** | Evidencia manual en `evidencia-auth.md` |
 
-La suite existente queda verde: **41 pruebas de backend** (39 previas + 2 del
-parser de `TRUST_PROXY`) y **3 de frontend**. Las pruebas específicas de R5 se
-acordaron con otro integrante del equipo y no se incluyeron en esta rama.
+La suite queda verde: **55 pruebas de backend** y **20 de frontend**, incluidas
+las validaciones estrictas del registro añadidas en esta versión.
 
 ## 2. R1 — Roles normalizados
 
