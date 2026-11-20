@@ -13,7 +13,7 @@ function invalidCredentials() {
   return new AppError(
     401,
     'INVALID_CREDENTIALS',
-    'Correo o contraseña incorrectos',
+    'Correo o contraseña incorrectos. Si has tenido varios intentos fallidos, espera unos minutos antes de volver a intentarlo.',
   );
 }
 

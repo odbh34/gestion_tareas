@@ -108,7 +108,7 @@ export function validatePassword(value, { name = '', email = '' } = {}) {
   return '';
 }
 
-export function passwordChecks(value, { name = '', email = '' } = {}) {
+export function passwordChecks(value) {
   const password = String(value ?? '');
 
   return [
@@ -123,14 +123,6 @@ export function passwordChecks(value, { name = '', email = '' } = {}) {
     {
       label: 'Número y símbolo',
       ok: /\d/.test(password) && /[^A-Za-z0-9]/.test(password),
-    },
-    {
-      label: 'No es una contraseña común',
-      ok: !COMMON_PASSWORDS.has(password.toLowerCase()),
-    },
-    {
-      label: 'No incluye tu nombre ni tu correo',
-      ok: !containsPersonalData(password, name, email),
     },
   ];
 }

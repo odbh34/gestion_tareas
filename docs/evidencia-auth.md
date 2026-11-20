@@ -102,7 +102,7 @@ Con la cuenta bloqueada, una contraseña **correcta** sigue devolviendo el mismo
 error:
 
 ```text
-{"error":{"code":"INVALID_CREDENTIALS","message":"Correo o contraseña incorrectos"}}
+{"error":{"code":"INVALID_CREDENTIALS","message":"Correo o contraseña incorrectos. Si has tenido varios intentos fallidos, espera unos minutos antes de volver a intentarlo."}}
 401
 ```
 

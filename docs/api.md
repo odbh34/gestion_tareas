@@ -115,8 +115,10 @@ Cada login crea una sesión nueva. Si la petición ya traía una sesión válida
 mismo usuario, la anterior se revoca antes de crear la nueva.
 
 Credenciales inválidas, usuario inactivo o cuenta bloqueada → `401
-INVALID_CREDENTIALS` con el mensaje genérico “Correo o contraseña incorrectos”.
-El tiempo de respuesta se mantiene comparable aunque el correo no exista.
+INVALID_CREDENTIALS` con el mensaje genérico “Correo o contraseña incorrectos.
+Si has tenido varios intentos fallidos, espera unos minutos antes de volver a
+intentarlo.” El tiempo de respuesta se mantiene comparable aunque el correo no
+exista.
 
 ### Bloqueo por cuenta
 
