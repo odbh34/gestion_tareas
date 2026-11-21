@@ -79,7 +79,8 @@ Evidencia manual (detalle en `evidencia-auth.md`):
 
 - Correo inexistente, contraseña incorrecta, cuenta inactiva y cuenta bloqueada
   devuelven el mismo `401 INVALID_CREDENTIALS` con el mensaje
-  “Correo o contraseña incorrectos”.
+  “Correo o contraseña incorrectos. Si has tenido varios intentos fallidos,
+  espera unos minutos antes de volver a intentarlo.”
 - Si el correo no existe, se compara igualmente contra un hash ficticio
   calculado al arrancar con `BCRYPT_ROUNDS` (`utils/password.js`).
 - Evidencia de tiempos locales: ~0,36 s para una cuenta existente y ~0,37 s

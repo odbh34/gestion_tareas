@@ -92,10 +92,10 @@ describe('Autenticación', () => {
     expect(badPassword.status).toBe(401);
     expect(unknownUser.status).toBe(401);
     expect(badPassword.body.error.message).toBe(
-      'Correo o contraseña incorrectos',
+      'Correo o contraseña incorrectos. Si has tenido varios intentos fallidos, espera unos minutos antes de volver a intentarlo.',
     );
     expect(unknownUser.body.error.message).toBe(
-      'Correo o contraseña incorrectos',
+      'Correo o contraseña incorrectos. Si has tenido varios intentos fallidos, espera unos minutos antes de volver a intentarlo.',
     );
   });
 

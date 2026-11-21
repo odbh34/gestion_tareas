@@ -60,10 +60,7 @@ export default function RegisterPage() {
     }
   }
 
-  const checks = passwordChecks(form.password, {
-    name: form.name,
-    email: form.email,
-  });
+  const checks = passwordChecks(form.password);
 
   return (
     <div className="auth-page">
